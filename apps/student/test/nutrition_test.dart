@@ -5,6 +5,8 @@ import 'package:bota_o_shape_student/core/data/student_health_repository.dart';
 import 'package:bota_o_shape_student/core/storage/private_store.dart';
 import 'package:bota_o_shape_student/features/nutrition/nutrition_models.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/material.dart';
+import 'package:bota_o_shape_student/features/nutrition/nutrition_entry_page.dart';
 
 void main() {
   Map<String, dynamic> plan({String status = 'published', String version = 'v1'}) => {
@@ -129,6 +131,88 @@ void main() {
     expect((await repo.records('meal-logs')).single['description'], 'Descrição revisada');
     await expectLater(repo.deleteDiary('meal-logs', 'foreign-id'), throwsA(isA<ApiFailure>()));
     await repo.deleteDiary('meal-logs', item.serverId!); expect(await repo.records('meal-logs'), isEmpty);
+  });
+
+  test('MealLog grams use positive API-safe decimal precision and range', () {
+    expect(normalizeMealGrams('00150,1250'), '150.125');
+    expect(normalizeMealGrams('0.001'), '0.001');
+    expect(normalizeMealGrams('9999999.999'), '9999999.999');
+    expect(normalizeMealGrams(150.0), '150');
+    for (final value in ['0', '-1', '0.0001', '150.1234', '10000000', '1e3', 'NaN', 'Infinity', '']) {
+      expect(() => normalizeMealGrams(value), throwsArgumentError, reason: value);
+    }
+  });
+  test('invalid quantities never become saved intents and valid quantities normalize before persistence', () async {
+    final store = MemoryPrivateStore(), gateway = DemoStudentGateway();
+    final repo = StudentHealthRepository(gateway: gateway, store: store);
+    for (final grams in ['1.2345', '10000000', '0', '-1']) {
+      await expectLater(repo.draft('meal-logs', {'description': 'Meal', 'grams': grams}), throwsArgumentError);
+    }
+    expect(repo.intents, isEmpty);
+    final item = await repo.draft('meal-logs', {'description': 'Meal', 'grams': '0150,1250'});
+    expect(item.payload['grams'], '150.125');
+    final restored = StudentHealthRepository(gateway: gateway, store: store); await restored.restore();
+    expect(restored.intents.single.payload['grams'], '150.125');
+  });
+  test('fresh diary quantities scale the preserved basis and changed food/source/preparation are unavailable', () {
+    final basis = {...snapshot, 'food_id': 'rice', 'source': 'tbca', 'source_version': '2026',
+      'preparation_state': 'cozido', 'external_id': 'TBCA-1'};
+    final intent = NutritionIntent(id: 'local', resource: 'meal-logs', payload: {'food': 'rice', 'grams': '100'},
+      snapshot: basis, state: 'confirmed', serverId: 'remote');
+    final row = <String, dynamic>{'id': 'remote', 'food': 'rice', 'grams': '200.000'};
+    final food = <String, dynamic>{'id': 'rice', 'source': {'kind': 'tbca', 'version': '2026'},
+      'preparation_state': 'cozido', 'external_id': 'TBCA-1'};
+    expect(preservedDiaryNutrients(row, intent, food)['energy_kcal'], 260);
+    expect(preservedDiaryNutrients({...row, 'grams': '50.125'}, intent, food)['energy_kcal'], closeTo(65.1625, .00001));
+    for (final changed in [<String, dynamic>{...row, 'food': 'beans'}, {...row, 'food': null}, {...row, 'grams': null}]) {
+      expect(preservedDiaryNutrients(changed, intent, food).values.every((v) => v == null), isTrue);
+    }
+    for (final changed in [<String, dynamic>{...food, 'preparation_state': 'cru'},
+      {...food, 'source': {'kind': 'usda', 'version': '2026'}},
+      {...food, 'source': {'kind': 'tbca', 'version': '2027'}}, {...food, 'external_id': 'other'}]) {
+      expect(preservedDiaryNutrients(row, intent, changed).values.every((v) => v == null), isTrue);
+    }
+    expect(preservedDiaryNutrients(row, intent, null).values.every((v) => v == null), isTrue);
+  });
+  test('fresh diary projection checks the returned food identity before reusing a local snapshot', () async {
+    final repo = StudentHealthRepository(gateway: DemoStudentGateway(), store: MemoryPrivateStore());
+    final basis = await repo.calculate('demo-food');
+    final item = await repo.draft('meal-logs', {'description': 'Rice', 'food': 'demo-food', 'grams': '100'}, snapshot: basis);
+    await repo.send(item);
+    final row = (await repo.records('meal-logs')).single;
+    final changedQuantity = await repo.diaryNutrients([{...row, 'grams': '200.000'}]);
+    expect(changedQuantity[item.serverId]!['energy_kcal'], 240);
+    final changedFood = await repo.diaryNutrients([{...row, 'food': 'different-food', 'grams': '200.000'}]);
+    expect(changedFood[item.serverId]!.values.every((v) => v == null), isTrue);
+  });
+  test('correcting a rejected draft preserves UUID, persists accepted precision and does not send', () async {
+    final store = MemoryPrivateStore(), gateway = DemoStudentGateway();
+    final repo = StudentHealthRepository(gateway: gateway, store: store);
+    final item = await repo.draft('meal-logs', {'description': 'Meal', 'grams': '100'});
+    final id = item.id; item.state = 'rejected'; item.payload['grams'] = '100.1234';
+    await repo.updateDraft(item, {...item.payload, 'grams': '150,125', 'description': 'Corrected meal'});
+    expect(item.id, id); expect(item.state, 'draft'); expect(item.payload['grams'], '150.125');
+    expect(await repo.records('meal-logs'), isEmpty);
+    final restored = StudentHealthRepository(gateway: gateway, store: store); await restored.restore();
+    expect(restored.intents.single.payload['description'], 'Corrected meal');
+    expect(restored.intents.single.payload['grams'], '150.125');
+    item.state = 'uncertain';
+    await expectLater(repo.updateDraft(item, {...item.payload, 'grams': '200'}), throwsStateError);
+  });
+  testWidgets('a rejected MealLog can be opened, corrected and saved before any resend', (tester) async {
+    final repo = StudentHealthRepository(gateway: DemoStudentGateway(), store: MemoryPrivateStore());
+    final item = await repo.draft('meal-logs', {'description': 'Meal', 'grams': '100'});
+    item.state = 'rejected'; item.payload['grams'] = '100.1234';
+    await tester.pumpWidget(MaterialApp(home: IntentReviewPage(repository: repo, item: item)));
+    await tester.scrollUntilVisible(find.text('Corrigir registro salvo'), 200);
+    await tester.tap(find.text('Corrigir registro salvo')); await tester.pumpAndSettle();
+    final quantity = find.byWidgetPredicate((widget) => widget is TextField && widget.decoration?.labelText == 'Quantidade em gramas (opcional para refeição livre)');
+    await tester.scrollUntilVisible(quantity, 200); await tester.enterText(quantity, '150,125');
+    await tester.scrollUntilVisible(find.text('Salvar correções neste aparelho'), 200);
+    await tester.tap(find.text('Salvar correções neste aparelho')); await tester.pumpAndSettle();
+    expect(item.payload['grams'], '150.125'); expect(item.state, 'draft');
+    expect(await repo.records('meal-logs'), isEmpty);
+    expect(find.text('Enviar registro'), findsOneWidget);
   });
 
 }

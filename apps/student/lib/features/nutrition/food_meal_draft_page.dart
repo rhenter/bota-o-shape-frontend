@@ -38,7 +38,7 @@ class _FoodMealDraftPageState extends State<FoodMealDraftPage> {
       while (_items.isNotEmpty) {
         final item = _items.first;
         await widget.repository.draft('meal-logs', {'description': '${_title.text.trim()}\n${item.food['name']} · ${item.food['preparation_state']}',
-          'logged_at': logged, 'food': item.food['id'], 'grams': item.grams.toString()},
+          'logged_at': logged, 'food': item.food['id'], 'grams': normalizeMealGrams(item.grams)},
           snapshot: {...item.snapshot, 'local_meal_id': _mealId, 'meal_title': _title.text.trim()});
         // Remove only after durable save so a partial storage failure never
         // creates duplicate local intents on the next explicit save attempt.

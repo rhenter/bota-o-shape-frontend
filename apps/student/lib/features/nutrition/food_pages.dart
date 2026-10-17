@@ -67,8 +67,11 @@ class _FoodPortionPageState extends State<FoodPortionPage> {
   final _grams = TextEditingController(text: '100');
   Map<String, dynamic>? _snapshot;
   String? _error;
-  double? get grams => double.tryParse(_grams.text.replaceAll(',', '.'));
-  bool get valid => grams != null && grams!.isFinite && grams! > 0;
+  String? get quantityError {
+    try { normalizeMealGrams(_grams.text); return null; } on ArgumentError catch (error) { return '${error.message}'; }
+  }
+  double? get grams => quantityError == null ? double.parse(normalizeMealGrams(_grams.text)) : null;
+  bool get valid => quantityError == null;
   @override
   void initState() { super.initState(); _load(); }
   @override
@@ -88,7 +91,7 @@ class _FoodPortionPageState extends State<FoodPortionPage> {
       Text('Fonte: ${(widget.food['source'] as Map)['name']} · ${(widget.food['source'] as Map)['version']}'),
       const Text('Preparo e fonte pertencem a este registro. Para outro preparo, escolha outro resultado da busca.'),
       TextField(controller: _grams, keyboardType: const TextInputType.numberWithOptions(decimal: true), onChanged: (_) => setState(() {}),
-        decoration: InputDecoration(labelText: 'Gramas comestíveis', errorText: valid ? null : 'Informe uma quantidade positiva.')),
+        decoration: InputDecoration(labelText: 'Gramas comestíveis', errorText: quantityError)),
       for (final measure in measures) TextButton(onPressed: () => setState(() { _grams.text = householdGrams(measure, 1).toString(); }),
         child: Text('Usar 1 ${measure['name']} = ${measure['grams']} g · ${measure['evidence']}')),
       if (measures.isEmpty) const Text('Sem medida caseira documentada para este alimento.'),

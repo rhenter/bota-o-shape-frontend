@@ -15,6 +15,31 @@ bool planAvailable(Map<String, dynamic> plan, DateTime now) {
       start != null && !today.isBefore(start) && (end == null || !today.isAfter(end));
 }
 
+/// MealLog is DecimalField(max_digits: 10, decimal_places: 3). Validate
+/// decimal text before converting to double so preview and transport agree.
+String normalizeMealGrams(Object? value) {
+  final text = '$value'.trim().replaceAll(',', '.');
+  if (!RegExp(r'^\d+(?:\.\d+)?$').hasMatch(text)) {
+    throw ArgumentError('Informe gramas positivas, sem notação científica.');
+  }
+  final parts = text.split('.');
+  final whole = parts.first.replaceFirst(RegExp(r'^0+(?=\d)'), '');
+  final fraction = parts.length == 1 ? '' : parts[1].replaceFirst(RegExp(r'0+$'), '');
+  if (whole.length > 7) throw ArgumentError('A quantidade máxima é 9999999,999 g.');
+  if (fraction.length > 3) throw ArgumentError('Use no máximo três casas decimais em gramas.');
+  if (whole == '0' && fraction.isEmpty) throw ArgumentError('Informe gramas maiores que zero.');
+  return fraction.isEmpty ? whole : '$whole.$fraction';
+}
+
+Map<String, dynamic> validatedNutritionPayload(String resource, Map<String, dynamic> payload) {
+  final result = Map<String, dynamic>.from(payload);
+  if (resource == 'meal-logs') {
+    if (result['food'] != null && result['grams'] == null) throw ArgumentError('Informe gramas para este alimento.');
+    if (result['grams'] != null) result['grams'] = normalizeMealGrams(result['grams']);
+  }
+  return result;
+}
+
 Map<String, double?> portionNutrients(Map<String, dynamic> snapshot, double grams) {
   if (!grams.isFinite || grams <= 0) throw ArgumentError('Informe gramas positivas.');
   final nutrients = snapshot['nutrients'] as Map<String, dynamic>? ?? {};
@@ -82,4 +107,29 @@ String nutritionRecordDetails(String resource, Map<String, dynamic> payload) {
     if (resource == 'check-ins') '${adherenceLabels[payload['adherence']]}\nObservação: ${payload['note'] ?? ''}\nPergunta: ${payload['question'] ?? ''}',
     if (resource == 'messages') '${payload['body']}',
   ].join('\n');
+}
+
+/// A diary response omits its nutrition snapshot. Reuse a local basis only
+/// after both the returned food and current catalog identity prove its origin.
+/// Quantity always comes from the freshly fetched row, never the old intent.
+Map<String, double?> preservedDiaryNutrients(Map<String, dynamic> record,
+    NutritionIntent? intent, Map<String, dynamic>? catalogFood) {
+  final unavailable = <String, double?>{for (final code in nutrientLabels.keys) code: null};
+  final snapshot = intent?.snapshot;
+  if (intent == null || intent.state != 'confirmed' || intent.serverId != record['id'] ||
+      snapshot == null || catalogFood == null || record['food'] == null ||
+      record['food'] != intent.payload['food'] || record['food'] != snapshot['food_id'] ||
+      record['food'] != catalogFood['id']) return unavailable;
+  final rawSource = catalogFood['source'];
+  final source = rawSource is Map<String, dynamic> ? rawSource : null;
+  for (final key in ['source', 'source_version', 'preparation_state', 'external_id']) {
+    if (snapshot[key] is! String || (snapshot[key] as String).isEmpty) return unavailable;
+  }
+  if (source == null || snapshot['source'] != source['kind'] || snapshot['source_version'] != source['version'] ||
+      snapshot['preparation_state'] != catalogFood['preparation_state'] || snapshot['external_id'] != catalogFood['external_id']) {
+    return unavailable;
+  }
+  try {
+    return portionNutrients(snapshot, double.parse(normalizeMealGrams(record['grams'])));
+  } on ArgumentError { return unavailable; }
 }

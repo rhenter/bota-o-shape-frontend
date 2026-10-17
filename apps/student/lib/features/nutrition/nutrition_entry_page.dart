@@ -5,29 +5,50 @@ import '../../core/api/api_client.dart';
 import '../../core/widgets/student_widgets.dart';
 import '../progress/progress_models.dart';
 import 'nutrition_models.dart';
+import 'nutrient_summary.dart';
 
 class NutritionEntryPage extends StatefulWidget {
-  const NutritionEntryPage({super.key, required this.repository, required this.resource, required this.day, this.version, this.slot, this.food, this.snapshot, this.grams});
+  const NutritionEntryPage({super.key, required this.repository, required this.resource, required this.day, this.version, this.slot, this.food, this.snapshot, this.grams, this.existingIntent});
   final StudentHealthRepository repository;
   final String resource;
   final DateTime day;
   final String? version, slot;
   final Map<String, dynamic>? food, snapshot;
   final double? grams;
+  final NutritionIntent? existingIntent;
   @override
   State<NutritionEntryPage> createState() => _NutritionEntryPageState();
 }
 class _NutritionEntryPageState extends State<NutritionEntryPage> {
-  final _description = TextEditingController(), _note = TextEditingController(), _question = TextEditingController(), _water = TextEditingController(), _portion = TextEditingController();
+  final _description = TextEditingController(), _note = TextEditingController(), _question = TextEditingController(), _water = TextEditingController(), _portion = TextEditingController(), _grams = TextEditingController();
   late DateTime _date = widget.day;
   TimeOfDay _time = TimeOfDay.now();
   String? _adherence, _error;
   bool _busy = false, _saved = false;
-  bool get _dirty => [_description, _note, _question, _water, _portion].any((c) => c.text.isNotEmpty) || _adherence != null;
+  bool get _dirty => [_description, _note, _question, _water, _portion, _grams].any((c) => c.text.isNotEmpty) || _adherence != null;
   @override
-  void initState() { super.initState(); if (widget.food != null) _description.text = '${widget.food!['name']} · ${widget.food!['preparation_state']}'; }
+  void initState() {
+    super.initState();
+    final saved = widget.existingIntent?.payload;
+    if (widget.food != null) _description.text = '${widget.food!['name']} · ${widget.food!['preparation_state']}';
+    if (widget.grams != null) _grams.text = normalizeMealGrams(widget.grams);
+    if (saved != null) {
+      _description.text = saved['description'] as String? ?? '';
+      _grams.text = saved['grams']?.toString() ?? '';
+      _water.text = saved['milliliters']?.toString() ?? '';
+      _adherence = saved['adherence'] as String?;
+      _note.text = widget.resource == 'check-ins' ? saved['note'] as String? ?? '' : '';
+      _question.text = (widget.resource == 'messages' ? saved['body'] : saved['question']) as String? ?? '';
+      final logged = DateTime.tryParse('${saved['logged_at'] ?? saved['checked_at']}')?.toLocal();
+      if (logged != null) { _date = logged; _time = TimeOfDay.fromDateTime(logged); }
+    }
+  }
+  String? get _quantityError {
+    if (_grams.text.trim().isEmpty && widget.food == null && widget.existingIntent?.payload['food'] == null) return null;
+    try { normalizeMealGrams(_grams.text); return null; } on ArgumentError catch (error) { return '${error.message}'; }
+  }
   @override
-  void dispose() { for (final c in [_description, _note, _question, _water, _portion]) { c.dispose(); } super.dispose(); }
+  void dispose() { for (final c in [_description, _note, _question, _water, _portion, _grams]) { c.dispose(); } super.dispose(); }
   Future<void> _save() async {
     setState(() { _busy = true; _error = null; });
     try {
@@ -36,7 +57,7 @@ class _NutritionEntryPageState extends State<NutritionEntryPage> {
       switch (widget.resource) {
         case 'check-ins':
           if (_adherence == null) throw ArgumentError('Escolha uma opção, se desejar registrar.');
-          payload = {'version': widget.version, 'meal_slot': widget.slot, 'adherence': _adherence, 'note': _note.text.trim(), 'question': _question.text.trim(), 'checked_at': logged};
+          payload = {'version': widget.version ?? widget.existingIntent?.payload['version'], 'meal_slot': widget.slot ?? widget.existingIntent?.payload['meal_slot'], 'adherence': _adherence, 'note': _note.text.trim(), 'question': _question.text.trim(), 'checked_at': logged};
         case 'hydration-logs':
           final amount = int.tryParse(_water.text);
           if (amount == null || amount <= 0) throw ArgumentError('Informe um volume inteiro positivo em ml.');
@@ -47,7 +68,18 @@ class _NutritionEntryPageState extends State<NutritionEntryPage> {
         default:
           if (_description.text.trim().isEmpty) throw ArgumentError('Descreva a refeição.');
           payload = {'logged_at': logged, 'description': [_description.text.trim(), if (_portion.text.isNotEmpty) 'Porção informada: ${_portion.text}', if (_note.text.isNotEmpty) 'Observação do aluno: ${_note.text}'].join('\n'),
-            if (widget.food != null) 'food': widget.food!['id'], if (widget.grams != null) 'grams': widget.grams.toString()};
+            if (widget.food != null || widget.existingIntent?.payload['food'] != null) 'food': widget.food?['id'] ?? widget.existingIntent!.payload['food'],
+            if (_grams.text.trim().isNotEmpty) 'grams': normalizeMealGrams(_grams.text)};
+      }
+      final existing = widget.existingIntent;
+      if (existing != null) {
+        await widget.repository.updateDraft(existing, payload);
+        if (mounted) {
+          setState(() { _saved = true; _busy = false; });
+          await WidgetsBinding.instance.endOfFrame;
+          if (mounted) Navigator.pop(context);
+        }
+        return;
       }
       final item = await widget.repository.draft(widget.resource, payload, snapshot: widget.snapshot);
       _saved = true;
@@ -75,13 +107,17 @@ class _NutritionEntryPageState extends State<NutritionEntryPage> {
     ],
     if (widget.resource == 'meal-logs') ...[
       TextField(controller: _description, onChanged: (_) => setState(() {}), decoration: const InputDecoration(labelText: 'Descrição da refeição avulsa'), maxLines: 3),
+      TextField(controller: _grams, keyboardType: const TextInputType.numberWithOptions(decimal: true), onChanged: (_) => setState(() {}),
+        decoration: InputDecoration(labelText: 'Quantidade em gramas (opcional para refeição livre)', errorText: _quantityError)),
+      if ((widget.snapshot ?? widget.existingIntent?.snapshot) != null && _grams.text.isNotEmpty && _quantityError == null)
+        NutrientSummary(values: portionNutrients((widget.snapshot ?? widget.existingIntent!.snapshot)!, double.parse(normalizeMealGrams(_grams.text))), title: 'Composição estimada da quantidade informada'),
       TextField(controller: _portion, onChanged: (_) => setState(() {}), decoration: const InputDecoration(labelText: 'Porção (opcional)')),
     ],
     if (widget.resource == 'hydration-logs') TextField(controller: _water, onChanged: (_) => setState(() {}), keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Água em ml')),
     if (widget.resource == 'meal-logs' || widget.resource == 'check-ins') TextField(controller: _note, onChanged: (_) => setState(() {}), maxLines: 3, decoration: const InputDecoration(labelText: 'Observação (opcional)')),
     if (widget.resource == 'check-ins' || widget.resource == 'messages') TextField(controller: _question, onChanged: (_) => setState(() {}), maxLines: 3, decoration: const InputDecoration(labelText: 'Pergunta para o nutricionista')),
     if (_error != null) StatusMessage(_error!),
-    FilledButton(onPressed: _busy ? null : _save, child: const Text('Salvar neste aparelho e revisar')),
+    FilledButton(onPressed: _busy ? null : _save, child: Text(widget.existingIntent == null ? 'Salvar neste aparelho e revisar' : 'Salvar correções neste aparelho')),
   ])));
 }
 
@@ -98,7 +134,7 @@ class _IntentReviewPageState extends State<IntentReviewPage> {
   List<Map<String, dynamic>>? _server;
   Future<void> _run(Future<void> Function() action) async {
     setState(() { _busy = true; _error = null; });
-    try { await action(); } catch (error) { _error = error is ApiFailure ? error.message : 'A ação não foi confirmada. Confira o estado local e o diário antes de qualquer novo envio.'; }
+    try { await action(); } catch (error) { _error = error is ApiFailure ? error.message : error is ArgumentError ? '${error.message}' : 'A ação não foi confirmada. Confira o estado local e o diário antes de qualquer novo envio.'; }
     if (mounted) setState(() { _busy = false; });
   }
   @override
@@ -111,6 +147,11 @@ class _IntentReviewPageState extends State<IntentReviewPage> {
       Text('Referência local para suporte: ${item.id}'),
       if (item.state == 'confirmed') const StatusMessage('Registro confirmado no diário.'),
       if (item.state == 'draft') FilledButton(onPressed: _busy ? null : () => _run(() => widget.repository.send(item)), child: const Text('Enviar registro')),
+      if (item.state == 'draft' || item.state == 'rejected') OutlinedButton(onPressed: _busy ? null : () async {
+        await Navigator.push<void>(context, MaterialPageRoute(builder: (_) => NutritionEntryPage(
+          repository: widget.repository, resource: item.resource, day: DateTime.now(), existingIntent: item)));
+        if (mounted) setState(() { _server = null; _reviewed = false; });
+      }, child: const Text('Corrigir registro salvo')),
       if (needsReview) ...[
         const StatusMessage('O envio pode ter sido recebido pela academia. Não há repetição automática. Atualize o diário e confira data, conteúdo e quantidade.'),
         OutlinedButton(onPressed: _busy ? null : () => _run(() async { _server = await widget.repository.records(item.resource); _reviewed = false; }), child: const Text('Consultar diário da academia')),

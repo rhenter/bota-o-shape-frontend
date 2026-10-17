@@ -54,6 +54,26 @@ class StudentHealthRepository {
     return items;
   }
 
+  Future<Map<String, Map<String, double?>>> diaryNutrients(List<Map<String, dynamic>> records) async {
+    await _authorize();
+    final catalog = <String, Map<String, dynamic>?>{};
+    final totals = <String, Map<String, double?>>{};
+    for (final record in records) {
+      final matches = intents.where((i) => i.state == 'confirmed' && i.serverId == record['id'] && i.snapshot != null &&
+        i.payload['food'] == record['food'] && i.snapshot!['food_id'] == record['food']);
+      final intent = matches.isEmpty ? null : matches.first;
+      final foodId = record['food'] as String?;
+      if (intent != null && foodId != null && !catalog.containsKey(foodId)) {
+        try {
+          catalog[foodId] = gateway.isDemo ? (await searchFoods('', 'tbca')).firstWhere((f) => f['id'] == foodId) :
+            (await _api.client.request('GET', 'api/food/foods/$foodId/'))! as Map<String, dynamic>;
+        } catch (_) { catalog[foodId] = null; }
+      }
+      totals[record['id'] as String] = preservedDiaryNutrients(record, intent, catalog[foodId]);
+    }
+    return totals;
+  }
+
   Future<void> editDiary(String resource, String id, Map<String, dynamic> changes) async {
     if (!{'meal-logs', 'hydration-logs'}.contains(resource)) throw ArgumentError('Recurso inválido');
     final existing = await records(resource);
@@ -108,7 +128,7 @@ class StudentHealthRepository {
   Future<List<Map<String, dynamic>>> searchFoods(String query, String source) async {
     await _authorize();
     if (gateway.isDemo) return [{
-      'id': 'demo-food', 'name': 'Arroz · exemplo fictício', 'preparation_state': 'Cozido',
+      'id': 'demo-food', 'external_id': 'demo-food', 'name': 'Arroz · exemplo fictício', 'preparation_state': 'Cozido',
       'branded': false, 'source': {'kind': 'demo', 'version': 'demo-2026', 'name': 'Demonstração, sem importação TBCA/USDA'},
       'household_measures': <dynamic>[],
     }];
@@ -117,7 +137,7 @@ class StudentHealthRepository {
   Future<Map<String, dynamic>> calculate(String foodId) async {
     await _authorize();
     if (gateway.isDemo) return {'food_id': foodId, 'description': 'Arroz fictício', 'preparation_state': 'Cozido',
-      'grams': '100', 'source': 'demo', 'source_version': 'demo-2026', 'nutrients': {
+      'grams': '100', 'external_id': 'demo-food', 'source': 'demo', 'source_version': 'demo-2026', 'nutrients': {
         'energy_kcal': {'per_100g': '120', 'value': '120', 'unit': 'kcal', 'name': 'Energia'},
         'protein_g': {'per_100g': '2.5', 'value': '2.5', 'unit': 'g', 'name': 'Proteínas'},
       }, 'estimated': true};
@@ -128,14 +148,31 @@ class StudentHealthRepository {
     await restore();
     if (!{'meal-logs', 'hydration-logs', 'check-ins', 'messages'}.contains(resource)) throw ArgumentError('Recurso inválido');
     final item = NutritionIntent(id: newNutritionIntentId(), resource: resource,
-      payload: jsonDecode(jsonEncode(payload)) as Map<String, dynamic>, snapshot: snapshot);
+      payload: jsonDecode(jsonEncode(validatedNutritionPayload(resource, payload))) as Map<String, dynamic>, snapshot: snapshot);
     intents.add(item);
     try { await _persist(); } catch (_) { intents.remove(item); rethrow; }
     return item;
   }
 
+  /// Rejected writes can be corrected without changing their local identity.
+  /// Uncertain writes must first be reconciled; editing never triggers a POST.
+  Future<void> updateDraft(NutritionIntent item, Map<String, dynamic> payload) async {
+    if (_sending || !intents.contains(item) || !{'draft', 'rejected'}.contains(item.state)) {
+      throw StateError('Confira o recebimento antes de alterar este registro.');
+    }
+    final updated = validatedNutritionPayload(item.resource, payload);
+    final previous = Map<String, dynamic>.from(item.payload), state = item.state;
+    item.payload..clear()..addAll(updated);
+    item.state = 'draft';
+    try { await _persist(); } catch (_) {
+      item.payload..clear()..addAll(previous); item.state = state; rethrow;
+    }
+  }
+
   Future<void> send(NutritionIntent item) async {
     if (_sending || item.state != 'draft') throw StateError('Confira o registro antes de enviar.');
+    final validated = validatedNutritionPayload(item.resource, item.payload);
+    item.payload..clear()..addAll(validated);
     _sending = true;
     try {
       await _authorize();

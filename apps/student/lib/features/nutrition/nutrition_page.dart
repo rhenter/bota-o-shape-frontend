@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../core/data/student_health_repository.dart';
 import '../../core/widgets/student_widgets.dart';
 import '../progress/progress_models.dart';
-import '../workouts/workout_models.dart';
 import 'nutrition_models.dart';
 import 'nutrient_summary.dart';
 import 'nutrition_entry_page.dart';
@@ -18,6 +17,7 @@ class NutritionPage extends StatefulWidget {
 }
 class _NutritionPageState extends State<NutritionPage> {
   List<Map<String, dynamic>> _plans = [], _meals = [], _water = [], _checks = [], _messages = [];
+  Map<String, Map<String, double?>> _mealNutrients = {};
   DateTime _day = DateTime.now();
   int _planDay = 1;
   bool _loading = true, _cached = false;
@@ -30,10 +30,11 @@ class _NutritionPageState extends State<NutritionPage> {
       await widget.repository.restore();
       final plans = await widget.repository.plans();
       final meals = await widget.repository.records('meal-logs');
+      final nutrients = await widget.repository.diaryNutrients(meals);
       final water = await widget.repository.records('hydration-logs');
       final checks = await widget.repository.records('check-ins');
       final messages = await widget.repository.records('messages');
-      if (mounted) setState(() { _plans = plans; _meals = meals; _water = water; _checks = checks; _messages = messages; });
+      if (mounted) setState(() { _plans = plans; _meals = meals; _mealNutrients = nutrients; _water = water; _checks = checks; _messages = messages; });
     } catch (_) { if (mounted) setState(() { _error = 'Não foi possível atualizar seus dados. Registros locais foram preservados.'; }); }
     if (mounted) setState(() { _loading = false; });
   }
@@ -94,10 +95,7 @@ class _NutritionPageState extends State<NutritionPage> {
   Widget build(BuildContext context) {
     final meals = _meals.where((m) => _onDay(m, 'logged_at')).toList();
     final water = _water.where((m) => _onDay(m, 'logged_at')).fold<int>(0, (n, m) => n + (m['milliliters'] as int));
-    final snapshots = meals.map((m) {
-      final matches = widget.repository.intents.where((i) => i.state == 'confirmed' && i.serverId == m['id'] && i.snapshot != null);
-      return matches.isEmpty ? <String, double?>{} : portionNutrients(matches.first.snapshot!, number(matches.first.payload['grams'])!);
-    }).toList();
+    final snapshots = meals.map((m) => _mealNutrients[m['id']] ?? <String, double?>{for (final code in nutrientLabels.keys) code: null}).toList();
     return PageBody(children: [
       Text('Sua rotina de alimentação', style: Theme.of(context).textTheme.headlineMedium),
       const Text('Registros opcionais, sem pontuação ou julgamento.'),
@@ -118,11 +116,12 @@ class _NutritionPageState extends State<NutritionPage> {
       if (meals.isEmpty && !_loading) const Text('Nenhuma refeição avulsa neste dia.'),
       for (var i = 0; i < meals.length; i++) SectionCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(nutritionRecordDetails('meal-logs', meals[i])),
+        if (snapshots[i].values.every((value) => value == null)) const Text('Composição indisponível para este registro.'),
         NutrientSummary(values: snapshots[i], title: 'Composição aproximada deste registro'),
         _diaryActions(meals[i], 'meal-logs'),
       ])),
       if (meals.isNotEmpty) NutrientSummary(values: sumNutrients(snapshots), title: 'Totais aproximados do dia'),
-      const Text('Totais dependem da composição preservada neste aparelho. Registros sem composição deixam o total como não informado.'),
+      const Text('Totais usam a quantidade atual do diário. A composição só está disponível quando o alimento, a fonte e o preparo podem ser confirmados com os dados preservados neste aparelho.'),
       FilledButton.icon(onPressed: () => _open(NutritionEntryPage(repository: widget.repository, resource: 'meal-logs', day: _day)),
         icon: const Icon(Icons.add), label: const Text('Adicionar refeição avulsa')),
       OutlinedButton(onPressed: () => _open(FoodMealDraftPage(repository: widget.repository, day: _day)), child: const Text('Montar refeição com vários alimentos')),
