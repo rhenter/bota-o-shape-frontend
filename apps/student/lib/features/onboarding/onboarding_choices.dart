@@ -3,7 +3,7 @@ class OnboardingChoices {
     this.notifications = false, this.largeText = false, this.skipped = false,
     this.completed = false, this.changedConsentPurposes = const {},
     this.consents = const {'health_data': false, 'coach_progress': false,
-      'nutrition': false, 'progress_photos': false}});
+      'nutrition': false, 'nutrition_plan': false, 'progress_photos': false}});
   final String name;
   final String? goal, daysPerWeek;
   final bool notifications, largeText, skipped, completed;

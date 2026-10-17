@@ -157,7 +157,7 @@ class ApiStudentGateway implements StudentGateway {
     final records = await client.list('api/tenancy/consents/');
     final saved = raw == null ? <String, dynamic>{...const OnboardingChoices().toJson()}
         : jsonDecode(raw) as Map<String, dynamic>;
-    final purposes = (saved['consents'] as Map<String, dynamic>).keys;
+    final purposes = {...const OnboardingChoices().consents.keys, ...(saved['consents'] as Map<String, dynamic>).keys};
     saved['consents'] = <String, dynamic>{for (final purpose in purposes)
       purpose: records.any((c) => c['subject'] == identity.id && c['purpose'] == purpose && c['granted'] == true)};
     return OnboardingChoices.fromJson(saved);

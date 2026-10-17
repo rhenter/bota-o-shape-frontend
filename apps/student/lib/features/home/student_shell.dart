@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/data/student_gateway.dart';
+import '../../core/data/student_health_repository.dart';
+import '../progress/progress_page.dart';
+import '../nutrition/nutrition_page.dart';
+import '../profile/privacy_page.dart';
 import '../../core/storage/private_store.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/student_widgets.dart';
@@ -24,6 +28,7 @@ class StudentShell extends StatefulWidget {
 
 class _StudentShellState extends State<StudentShell> {
   late final WorkoutSyncQueue _queue = WorkoutSyncQueue(gateway: widget.gateway, store: widget.store);
+  late final StudentHealthRepository _health = StudentHealthRepository(gateway: widget.gateway, store: widget.store);
   List<StudentWorkout> _plans = [];
   List<Map<String, dynamic>> _history = [];
   OnboardingChoices? _preferences;
@@ -109,11 +114,10 @@ class _StudentShellState extends State<StudentShell> {
   Widget build(BuildContext context) {
     final pages = [
       _home(context), _workouts(context),
-      widget.progressPage ?? const PageBody(children: [StatusMessage('Seu progresso',
-        action: null), Text('Consulte avaliações liberadas pelo seu professor. Seus dados e fotos permanecem privados.')]),
-      widget.nutritionPage ?? const PageBody(children: [StatusMessage('Sua rotina de alimentação'),
-        Text('O plano alimentar individualizado é acompanhado por nutricionista habilitado. Registros são opcionais e sem julgamentos.')]),
-      _profile(context),
+      widget.progressPage ?? ProgressPage(repository: _health),
+      widget.nutritionPage ?? NutritionPage(repository: _health),
+      PrivacyPage(repository: _health, onPreferences: _privacy, onLogout: widget.onLogout,
+        onSwitchAcademy: widget.onSwitchAcademy, disabled: _queue.syncing),
     ];
     Widget body = pages[_tab];
     if (_preferences?.largeText == true) {
@@ -218,17 +222,4 @@ class _StudentShellState extends State<StudentShell> {
     ],
   )));
 
-  Widget _profile(BuildContext context) => PageBody(children: [
-    Text('Perfil e privacidade', style: Theme.of(context).textTheme.headlineMedium), const SizedBox(height: 16),
-    SectionCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(widget.gateway.identity.name), Text(widget.gateway.identity.academy), const Text('Acesso do aluno'),
-    ])),
-    ListTile(leading: const Icon(Icons.privacy_tip_outlined), title: const Text('Consentimentos e preferências'),
-      trailing: const Icon(Icons.chevron_right), onTap: _privacy),
-    if (widget.onSwitchAcademy != null) ListTile(leading: const Icon(Icons.business_outlined), title: const Text('Trocar academia'),
-      onTap: _queue.syncing ? null : widget.onSwitchAcademy),
-    const StatusMessage('Para solicitar exportação ou exclusão de dados, fale com o canal de privacidade da sua academia. '
-      'Sair encerra a sessão; registros pendentes permanecem criptografados neste aparelho para o próximo acesso desta conta.'),
-    OutlinedButton.icon(onPressed: _queue.syncing ? null : widget.onLogout, icon: const Icon(Icons.logout), label: const Text('Sair')),
-  ]);
 }

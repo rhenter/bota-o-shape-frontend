@@ -70,6 +70,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
         'health_data': 'Uso de dados de saúde para acompanhamento',
         'coach_progress': 'Compartilhar progresso com meu professor',
         'nutrition': 'Acompanhamento nutricional pelo profissional habilitado',
+        'nutrition_plan': 'Plano alimentar individualizado pelo nutricionista',
         'progress_photos': 'Guardar fotos privadas de progresso',
       }.entries)
         SwitchListTile(contentPadding: EdgeInsets.zero, title: Text(entry.value),
