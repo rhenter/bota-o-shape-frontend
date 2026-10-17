@@ -160,9 +160,12 @@ export default function DashboardPage() {
             </ul>
           ) : (
             <p className="muted">
-              O histórico de avaliações será conectado na próxima etapa.
+              Consulte as coletas, protocolos e relatórios em Avaliações.
             </p>
           )}
+          <Link className="button" href="/avaliacoes">
+            Ver avaliações
+          </Link>
         </section>
         <section className="card next-step-card">
           <span className="eyebrow">CADA ALUNO, UMA ROTINA</span>

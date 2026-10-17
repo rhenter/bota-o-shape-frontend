@@ -10,6 +10,8 @@ const labels: Record<string, string> = {
   available: "Disponível",
   maintenance: "Em manutenção",
   published: "Publicado",
+  completed: "Concluída",
+  released: "Liberada",
 };
 export function StatusBadge({
   status,

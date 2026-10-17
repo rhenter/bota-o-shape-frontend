@@ -24,6 +24,8 @@ import type {
   User,
 } from "@/lib/domain";
 
+import type { TrainingData } from "@/lib/training-data";
+
 type Repository = Omit<DemoRepository, "mode"> & { mode: "demo" | "api" };
 interface Snapshot {
   user: User;
@@ -116,6 +118,9 @@ function demoExerciseRecord(item: Exercise): ApiExercise {
 }
 
 function useAppValue(mode: "demo" | "api") {
+  const [demoTraining, setDemoTraining] = useState<
+    Record<string, TrainingData>
+  >({});
   const [tenantId, selectTenant] = useState<string>(
     mode === "demo" ? demoIds.tenant : "",
   );
@@ -290,6 +295,7 @@ function useAppValue(mode: "demo" | "api") {
     else void loadTenant(id, apiClient.userId);
   }
   async function logout() {
+    setDemoTraining({});
     generation.current++;
     setSnapshot(emptySnapshot);
     setTenants([]);
@@ -387,6 +393,8 @@ function useAppValue(mode: "demo" | "api") {
           getSubscription: () => undefined,
         };
   return {
+    demoTraining,
+    setDemoTraining,
     context,
     tenant,
     tenants,

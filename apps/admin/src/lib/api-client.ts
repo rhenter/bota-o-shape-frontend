@@ -1,3 +1,17 @@
+import type {
+  ApiWorkoutTemplate,
+  WorkoutTemplateInput,
+  ApiWorkoutAssignment,
+  WorkoutAssignmentInput,
+  ApiWorkoutSession,
+  ApiMeasurementProtocol,
+  ApiAssessment,
+  AssessmentInput,
+  AssessmentStatus,
+  ApiAssessmentReport,
+  ApiConsent,
+} from "./training-contracts";
+export type * from "./training-contracts";
 // DTOs mirror the local Django API serializers, not demo view models.
 export type ApiRole =
   "owner" | "admin" | "coach" | "dietitian" | "student" | "billing.manage";
@@ -239,6 +253,81 @@ export class ApiClient {
     }
     return items;
   }
+  getWorkoutTemplates = (tenant: string) =>
+    this.list<ApiWorkoutTemplate>("/api/workouts/templates/", tenant);
+  getWorkoutTemplate = (tenant: string, id: string) =>
+    this.request<ApiWorkoutTemplate>(
+      `/api/workouts/templates/${encodeURIComponent(id)}/`,
+      {},
+      tenant,
+    );
+  createWorkoutTemplate = (tenant: string, data: WorkoutTemplateInput) =>
+    this.request<ApiWorkoutTemplate>(
+      "/api/workouts/templates/",
+      { method: "POST", body: JSON.stringify(data) },
+      tenant,
+    );
+  // Nested writes are supported only on create by the current Django serializer.
+  updateWorkoutMetadata = (
+    tenant: string,
+    id: string,
+    data: Omit<WorkoutTemplateInput, "days">,
+  ) =>
+    this.request<ApiWorkoutTemplate>(
+      `/api/workouts/templates/${encodeURIComponent(id)}/`,
+      { method: "PATCH", body: JSON.stringify(data) },
+      tenant,
+    );
+  publishWorkout = (tenant: string, id: string) =>
+    this.request<ApiWorkoutTemplate>(
+      `/api/workouts/templates/${encodeURIComponent(id)}/publish/`,
+      { method: "POST" },
+      tenant,
+    );
+  reviseWorkout = (tenant: string, id: string) =>
+    this.request<ApiWorkoutTemplate>(
+      `/api/workouts/templates/${encodeURIComponent(id)}/revise/`,
+      { method: "POST" },
+      tenant,
+    );
+  getWorkoutAssignments = (tenant: string) =>
+    this.list<ApiWorkoutAssignment>("/api/workouts/assignments/", tenant);
+  createWorkoutAssignment = (tenant: string, data: WorkoutAssignmentInput) =>
+    this.request<ApiWorkoutAssignment>(
+      "/api/workouts/assignments/",
+      { method: "POST", body: JSON.stringify(data) },
+      tenant,
+    );
+  getWorkoutSessions = (tenant: string) =>
+    this.list<ApiWorkoutSession>("/api/workouts/sessions/", tenant);
+  getAssessmentProtocols = (tenant: string) =>
+    this.list<ApiMeasurementProtocol>("/api/assessments/protocols/", tenant);
+  getAssessments = (tenant: string) =>
+    this.list<ApiAssessment>("/api/assessments/assessments/", tenant);
+  createAssessment = (tenant: string, data: AssessmentInput) =>
+    this.request<ApiAssessment>(
+      "/api/assessments/assessments/",
+      { method: "POST", body: JSON.stringify(data) },
+      tenant,
+    );
+  transitionAssessment = (
+    tenant: string,
+    id: string,
+    status: AssessmentStatus,
+  ) =>
+    this.request<ApiAssessment>(
+      `/api/assessments/assessments/${encodeURIComponent(id)}/transition/`,
+      { method: "POST", body: JSON.stringify({ status }) },
+      tenant,
+    );
+  getAssessmentReport = (tenant: string, id: string) =>
+    this.request<ApiAssessmentReport>(
+      `/api/assessments/assessments/${encodeURIComponent(id)}/report/`,
+      {},
+      tenant,
+    );
+  getConsents = (tenant: string) =>
+    this.list<ApiConsent>("/api/tenancy/consents/", tenant);
   getTenants = () => this.list<ApiTenant>("/api/tenancy/tenants/");
   getUsers = (tenant: string) => this.list<ApiUser>("/api/user/users/", tenant);
   getUser = (tenant: string, id: string) =>

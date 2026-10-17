@@ -4,7 +4,8 @@ import { use, useState } from "react";
 import { AppShell, useAppContext } from "@/components/app-shell";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { EmptyState, ErrorState } from "@/components/states";
+import { EmptyState, ErrorState, LoadingState } from "@/components/states";
+import { useTrainingData } from "@/components/use-training-data";
 
 export default function StudentProfilePage({
   params,
@@ -20,7 +21,17 @@ export default function StudentProfilePage({
   );
 }
 function StudentProfile({ id }: { id: string }) {
-  const { context, repository, membership, mode, api } = useAppContext();
+  const {
+    context,
+    repository,
+    membership,
+    mode,
+    api,
+    data,
+    trainingLoading,
+    trainingError,
+    refreshTraining,
+  } = useTrainingData();
   const student = repository
     .getStudents(context)
     .find((item) => item.id === id);
@@ -39,12 +50,12 @@ function StudentProfile({ id }: { id: string }) {
         />
       </>
     );
-  const workouts = repository
-    .getWorkouts(context)
-    .filter((item) => item.studentIds.includes(student.id));
-  const assessments = repository
-    .getAssessments(context)
-    .filter((item) => item.studentId === student.id);
+  const workouts = data.assignments.filter(
+    (item) => item.student === student.id,
+  );
+  const assessments = data.assessments.filter(
+    (item) => item.student === student.id,
+  );
   const sections = [
     { id: "overview", label: "Visão geral" },
     { id: "workouts", label: "Treinos" },
@@ -160,9 +171,11 @@ function StudentProfile({ id }: { id: string }) {
           <section className="card">
             <h2>Acompanhamento</h2>
             <p>
-              {mode === "demo"
-                ? `${workouts.length} treino(s) e ${assessments.length} avaliação(ões) nesta demonstração.`
-                : "Os históricos de treino e avaliação serão conectados na próxima etapa."}
+              {trainingLoading
+                ? "Carregando acompanhamento…"
+                : trainingError
+                  ? "Acompanhamento indisponível."
+                  : `${workouts.length} atribuição(ões) de treino e ${assessments.length} avaliação(ões)${mode === "demo" ? " nesta demonstração" : " registradas"}.`}
             </p>
           </section>
         </div>
@@ -170,19 +183,32 @@ function StudentProfile({ id }: { id: string }) {
       {section === "workouts" && (
         <section className="card">
           <h2>Treinos do aluno</h2>
-          {workouts.length ? (
+          {trainingLoading ? (
+            <LoadingState />
+          ) : trainingError ? (
+            <ErrorState description={trainingError} onRetry={refreshTraining} />
+          ) : workouts.length ? (
             workouts.map((workout) => (
               <article key={workout.id} className="list-card">
-                <h3>{workout.name}</h3>
-                <p>{workout.goal}</p>
-                <StatusBadge status={workout.status} />
-                <small>Versão {workout.version}</small>
+                <h3>{workout.template_detail.name}</h3>
+                <p>
+                  {workout.starts_on} até {workout.ends_on ?? "sem término"}
+                </p>
+                <StatusBadge
+                  status={workout.is_active ? "active" : "inactive"}
+                />
+                <small>Versão {workout.template_detail.version}</small>
+                <p>
+                  <Link href={`/treinos/novo?id=${workout.template}`}>
+                    Ver versão atribuída
+                  </Link>
+                </p>
               </article>
             ))
           ) : (
             <EmptyState
               title="Nenhum treino disponível"
-              description="O histórico de treinos será conectado na próxima etapa."
+              description="Nenhuma atribuição de treino foi registrada para este aluno."
             />
           )}
         </section>
@@ -190,23 +216,40 @@ function StudentProfile({ id }: { id: string }) {
       {section === "assessments" && (
         <section className="card">
           <h2>Avaliações</h2>
-          {assessments.length ? (
+          {trainingLoading ? (
+            <LoadingState />
+          ) : trainingError ? (
+            <ErrorState description={trainingError} onRetry={refreshTraining} />
+          ) : assessments.length ? (
             assessments.map((assessment) => (
               <article className="list-card" key={assessment.id}>
-                <h3>{assessment.protocol}</h3>
+                <h3>
+                  {[
+                    ...new Set(assessment.measurements.map((m) => m.method)),
+                  ].join(" · ") || "Avaliação"}
+                </h3>
                 <p>
-                  {new Date(assessment.assessedAt).toLocaleDateString("pt-BR", {
-                    timeZone: "America/Sao_Paulo",
-                  })}{" "}
-                  · {assessment.released ? "Liberada ao aluno" : "Não liberada"}
+                  {new Date(assessment.assessed_at).toLocaleDateString(
+                    "pt-BR",
+                    {
+                      timeZone: "America/Sao_Paulo",
+                    },
+                  )}{" "}
+                  ·{" "}
+                  {assessment.status === "released"
+                    ? "Liberada ao aluno"
+                    : "Não liberada"}
                 </p>
                 <p>{assessment.notes}</p>
+                <Link href={`/avaliacoes/relatorio?id=${assessment.id}`}>
+                  Ver avaliação
+                </Link>
               </article>
             ))
           ) : (
             <EmptyState
               title="Nenhuma avaliação disponível"
-              description="O histórico de avaliações será conectado na próxima etapa."
+              description="Nenhuma avaliação foi registrada para este aluno."
             />
           )}
         </section>
@@ -217,8 +260,26 @@ function StudentProfile({ id }: { id: string }) {
           <p>
             {mode === "demo"
               ? `Acompanhamento nutricional: ${student.nutritionConsent ? "consentimento demonstrativo concedido" : "não concedido"}.`
-              : "Os registros de consentimento não estão carregados nesta etapa. Acesso nutricional permanece bloqueado até validação da habilitação e dos consentimentos pela API."}
+              : "Acesso nutricional depende da validação da habilitação e dos consentimentos pela API."}
           </p>
+          {trainingLoading ? (
+            <LoadingState />
+          ) : trainingError ? (
+            <ErrorState description={trainingError} onRetry={refreshTraining} />
+          ) : (
+            <ul>
+              {data.consents
+                .filter((consent) => consent.subject === student.id)
+                .map((consent) => (
+                  <li key={consent.id}>
+                    {consent.purpose} ·{" "}
+                    {consent.granted && !consent.revoked_at
+                      ? "Ativo"
+                      : "Revogado"}
+                  </li>
+                ))}
+            </ul>
+          )}
           <p className="muted">
             Somente o titular pode conceder ou revogar seus consentimentos. Esta
             tela não altera essa escolha.

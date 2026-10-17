@@ -14,6 +14,9 @@ const navigation = [
   { href: "/alunos", label: "Alunos", icon: "♙" },
   { href: "/exercicios", label: "Exercícios", icon: "↔" },
   { href: "/equipamentos", label: "Equipamentos", icon: "◫" },
+  { href: "/treinos", label: "Treinos", icon: "↔" },
+  { href: "/avaliacoes", label: "Avaliações", icon: "◉" },
+  { href: "/agenda", label: "Agenda", icon: "▤" },
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -181,7 +184,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
         <div className="sidebar-upcoming">
           <span>Em próximas etapas</span>
-          <p>Treinos · Avaliações · Nutrição</p>
+          <p>Nutrição</p>
           {membership?.roles.includes("admin") && <p>Equipe e configurações</p>}
           {canManageBilling(user, membership, tenant.id) && (
             <p>Cobrança da academia</p>
