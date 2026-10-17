@@ -1,0 +1,159 @@
+# Bota o Shape Frontend MVP Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Implement the approved Bota o Shape student app and professional/admin panel as responsive, accessible frontend applications backed by typed demo repositories that can later be replaced by the API.
+
+**Architecture:** Keep the two deliverables independent: `apps/admin` is a Next.js App Router application and `apps/student` is a Flutter Material 3 application. Each app owns focused feature modules and a replaceable typed demo data layer; shared branding is copied from the approved asset into each platform's asset system. No backend or real authentication is invented.
+
+**Tech Stack:** Next.js, React, TypeScript, CSS Modules/global CSS, Vitest, Testing Library; Flutter, Dart, Material 3, flutter_test.
+
+**Spec:** `/Users/rafaelhenter/Downloads/Bota-o-Shape/product-spec.md`
+
+## Global Constraints
+
+- The academy is the only paying customer; students never see checkout, prices, cards, or an individual subscription.
+- Use the approved navy/lime visual identity and original `Bota o Shape!` logo from `/Users/rafaelhenter/Downloads/Bota o Shape! fitness logo.png`.
+- UI language is pt-BR; dates and units use Brazilian conventions.
+- Admin supports combined professor/nutritionist roles, tenant switching, tenant-scoped data, and a separate `billing.manage` capability.
+- Nutrition authoring and publishing UI is available only to a verified nutritionist with an active link and consent; admin status alone is insufficient.
+- Destructive account actions are archive/deactivate flows; password reset never displays or creates a readable password.
+- Exercise media and locally created content remain draft until reviewed; never imply automatic approval.
+- Assessment comparisons must expose method and conditions and compare only compatible methods.
+- Missing nutrients render as `Não informado`, never zero; food records expose source and preparation.
+- Every critical page includes responsive behavior and meaningful empty, loading, and error presentations.
+- Demo data must be explicitly identified and isolated behind repository interfaces.
+- Prefer focused files and simple explicit behavior; do not add state libraries, UI kits, chart libraries, code generation, or backend stubs.
+
+---
+
+### Task 1: Repository foundation and typed domain utilities
+
+**Files:**
+- Create: `package.json`, `.gitignore`, `README.md`
+- Create: `apps/admin/package.json`, `apps/admin/tsconfig.json`, `apps/admin/next.config.ts`, `apps/admin/vitest.config.ts`, `apps/admin/src/app/layout.tsx`, `apps/admin/src/app/globals.css`, `apps/admin/src/app/page.tsx`
+- Create: `apps/admin/src/lib/domain.ts`, `apps/admin/src/lib/demo-repository.ts`, `apps/admin/src/lib/nutrition.ts`, `apps/admin/src/lib/permissions.ts`
+- Create: `apps/admin/src/lib/nutrition.test.ts`, `apps/admin/src/lib/permissions.test.ts`
+- Create: `apps/admin/public/brand/logo.png`
+- Create: `apps/student/pubspec.yaml`, `apps/student/analysis_options.yaml`, `apps/student/lib/main.dart`, `apps/student/lib/core/theme/app_theme.dart`, `apps/student/lib/core/data/demo_repository.dart`, `apps/student/assets/brand/logo.png`
+
+**Interfaces:**
+- Produces: `DemoRepository`, `demoRepository`, `calculateNutrientsPerPortion`, `canPublishMealPlan`, `canManageBilling`, shared domain types, CSS tokens, and Flutter theme tokens.
+
+- [ ] Create the monorepo manifests, platform scaffolds, original logo copies, and development documentation.
+- [ ] Write Vitest tests covering proportional nutrition calculation, absent nutrient preservation, combined roles, verified nutrition publishing, tenant membership, and billing permission.
+- [ ] Run `npm install` from the repo root, then run the focused tests and confirm they fail before implementation.
+- [ ] Implement only the typed demo repository, domain utilities, base Next layout, and Flutter theme/repository needed by later tasks.
+- [ ] Run `npm test`, `npm run lint`, and `npm run build`; if Flutter is installed also run `flutter analyze` and `flutter test` from `apps/student`.
+- [ ] Commit with message `feat: scaffold frontend applications`.
+
+### Task 2: Admin shell, access, dashboard, students, catalog, and equipment
+
+**Files:**
+- Create: `apps/admin/src/components/app-shell.tsx`, `apps/admin/src/components/ui/*`, `apps/admin/src/components/states.tsx`
+- Create: `apps/admin/src/app/entrar/page.tsx`, `apps/admin/src/app/recuperar-senha/page.tsx`, `apps/admin/src/app/dashboard/page.tsx`
+- Create: `apps/admin/src/app/alunos/page.tsx`, `apps/admin/src/app/alunos/[id]/page.tsx`
+- Create: `apps/admin/src/app/exercicios/page.tsx`, `apps/admin/src/app/exercicios/novo/page.tsx`, `apps/admin/src/app/equipamentos/page.tsx`
+- Create: `apps/admin/src/components/app-shell.test.tsx`, `apps/admin/src/app/alunos/alunos.test.tsx`
+
+**Interfaces:**
+- Consumes: `demoRepository`, role/tenant types, CSS tokens from Task 1.
+- Produces: `AppShell`, `PageHeader`, `DataTable`, `StatusBadge`, `EmptyState`, `LoadingState`, `ErrorState`, tenant switcher behavior, responsive navigation.
+
+- [ ] Write component tests for keyboard-accessible navigation, active tenant selection, student search/status results, and explicit demo mode labeling.
+- [ ] Run the focused tests and confirm expected failures.
+- [ ] Implement login/recovery, responsive shell, dashboard, students list/profile, exercise library/editor, and equipment inventory based on admin boards 01 and 02.
+- [ ] Represent disabled OAuth as unavailable until configured, local exercises as draft/reviewed, and account removal as archive/deactivate.
+- [ ] Verify at 390 px and desktop widths using CSS responsive rules; run focused tests, lint, and build.
+- [ ] Commit with message `feat: add admin shell and core catalogs`.
+
+### Task 3: Admin workouts, assessments, and agenda
+
+**Files:**
+- Create: `apps/admin/src/app/treinos/page.tsx`, `apps/admin/src/app/treinos/novo/page.tsx`, `apps/admin/src/app/treinos/atribuir/page.tsx`
+- Create: `apps/admin/src/app/avaliacoes/page.tsx`, `apps/admin/src/app/avaliacoes/nova/page.tsx`, `apps/admin/src/app/avaliacoes/relatorio/page.tsx`
+- Create: `apps/admin/src/app/agenda/page.tsx`
+- Create: `apps/admin/src/components/workouts/workout-builder.tsx`, `apps/admin/src/components/workouts/student-preview.tsx`, `apps/admin/src/components/assessments/assessment-chart.tsx`
+- Create: `apps/admin/src/components/workouts/workout-builder.test.tsx`, `apps/admin/src/lib/assessments.test.ts`
+
+**Interfaces:**
+- Consumes: Task 2 shell/UI components and Task 1 repository/types.
+- Produces: workout builder with dedicated `coachObservation`, mobile student preview, compatible assessment comparison, and agenda views.
+
+- [ ] Write tests proving professor observation stays separate from library instructions/student note, per-set targets are editable, and incompatible assessment methods have no direct comparison.
+- [ ] Run focused tests and confirm expected failures.
+- [ ] Implement training list/builder/assignment, guided assessment collection/report, accessible text-equivalent chart, and agenda based on boards 02 and 06.
+- [ ] Ensure one dominant action, non-blocking outlier guidance, method/conditions disclosure, draft/publish version wording, and mobile professor usability.
+- [ ] Run focused tests, lint, and build.
+- [ ] Commit with message `feat: add workouts assessments and agenda`.
+
+### Task 4: Admin nutrition, team, settings, audit, and billing
+
+**Files:**
+- Create: `apps/admin/src/app/nutricao/page.tsx`, `apps/admin/src/app/nutricao/catalogo/page.tsx`, `apps/admin/src/app/nutricao/catalogo/[id]/page.tsx`, `apps/admin/src/app/nutricao/planos/novo/page.tsx`, `apps/admin/src/app/nutricao/planos/revisar/page.tsx`
+- Create: `apps/admin/src/app/equipe/page.tsx`, `apps/admin/src/app/configuracoes/page.tsx`, `apps/admin/src/app/configuracoes/assinatura/page.tsx`, `apps/admin/src/app/auditoria/page.tsx`
+- Create: `apps/admin/src/components/nutrition/meal-plan-editor.tsx`, `apps/admin/src/components/nutrition/food-search.tsx`, `apps/admin/src/components/admin/team-table.tsx`
+- Create: `apps/admin/src/components/nutrition/meal-plan-editor.test.tsx`, `apps/admin/src/app/configuracoes/assinatura/billing.test.tsx`
+
+**Interfaces:**
+- Consumes: Task 1 permissions/nutrition functions and Task 2 shell/UI components.
+- Produces: consent-aware nutrition workspace, source-aware food editor, combined-role team administration, settings/audit pages, and billing page gated by `billing.manage`.
+
+- [ ] Write tests for nutrition publishing gates, source/preparation labels, missing nutrients, combined roles, safe password reset copy, and hidden billing controls without permission.
+- [ ] Run focused tests and confirm expected failures.
+- [ ] Implement the nutrition portfolio/anamnesis/editor/review/catalog pages based on boards 03–05, team/settings/audit based on boards 03 and 08, and academy billing based on board 07.
+- [ ] Show version/CRN/consent states, hosted-provider billing actions, pilot/pending/overdue/cancellation states, and no card fields or invented prices.
+- [ ] Run focused tests, lint, and build.
+- [ ] Commit with message `feat: add nutrition administration and billing`.
+
+### Task 5: Flutter student shell, onboarding, and workout flow
+
+**Files:**
+- Create: `apps/student/lib/core/widgets/*`, `apps/student/lib/features/auth/*`, `apps/student/lib/features/onboarding/*`, `apps/student/lib/features/home/*`, `apps/student/lib/features/workouts/*`
+- Create: `apps/student/test/workout_flow_test.dart`, `apps/student/test/onboarding_test.dart`
+
+**Interfaces:**
+- Consumes: Flutter theme and demo repository from Task 1.
+- Produces: student-only navigation with `Início`, `Treinos`, `Progresso`, `Nutrição`, `Perfil`; invite access; granular consent onboarding; workout list/detail/execution/rest/summary.
+
+- [ ] Write widget/unit tests for student-only navigation, optional onboarding fields, granular consent, coach observation visibility before/during sets, personal note separation, rest timer controls, and offline sync status.
+- [ ] Run Flutter tests and confirm expected failures when the Flutter SDK is available; otherwise document the missing SDK in the report and proceed with source implementation.
+- [ ] Implement approved mobile boards 01, 02, 04, and the student preview from admin board 06 using focused widgets and demo repository data.
+- [ ] Include disabled unconfigured OAuth, invite entry, approved-media fallback, previous values without automatic recommendation, skip/substitute, RPE, idempotent pending-sync presentation, and non-calorie-focused summary.
+- [ ] Run formatter, analyze, and widget tests when tooling is available; otherwise perform source-level consistency checks and report the limitation.
+- [ ] Commit with message `feat: add student access and workout flow`.
+
+### Task 6: Flutter progress, assessments, nutrition, and privacy
+
+**Files:**
+- Create: `apps/student/lib/features/progress/*`, `apps/student/lib/features/nutrition/*`, `apps/student/lib/features/profile/*`
+- Create: `apps/student/test/progress_test.dart`, `apps/student/test/nutrition_test.dart`, `apps/student/test/profile_test.dart`
+
+**Interfaces:**
+- Consumes: Task 5 navigation/widgets and Task 1 repository/theme.
+- Produces: workout history, accessible progress visualization, assessment report, active meal plan/check-in, food search/portion calculator, meal/hydration diary, and privacy controls.
+
+- [ ] Write tests for compatible-only comparisons, gaps and units, paused/expired plans, plan version changes, neutral meal check-ins, food preparation/source selection, proportional nutrient calculation with absent values preserved, and consent/privacy actions.
+- [ ] Run tests and confirm expected failures when tooling is available.
+- [ ] Implement approved mobile boards 03, 05, and 06 with accessible text alternatives for charts, neutral progress language, meal plan author/CRN/version/review data, authorized substitutions, and separate ad-hoc meal records.
+- [ ] Exclude student billing, streak judgments, automatic goals, barcode/camera/wearables, and clinical advice.
+- [ ] Run formatter, analyze, and widget tests when tooling is available; otherwise perform source-level consistency checks and report the limitation.
+- [ ] Commit with message `feat: add student progress nutrition and privacy`.
+
+### Task 7: Cross-app integration, responsive audit, and release checks
+
+**Files:**
+- Modify: `README.md`, `apps/admin/src/app/globals.css`, focused files found by verification
+- Create: `docs/frontend-architecture.md`, `docs/pre-production-checklist.md`
+- Test: all existing frontend tests
+
+**Interfaces:**
+- Consumes: all preceding tasks.
+- Produces: documented runbook, architecture boundary, API replacement points, and a green web release build with Flutter readiness evidence.
+
+- [ ] Verify every route and bottom-navigation destination has content, empty/loading/error demonstrations, visible demo labeling, and no broken local links.
+- [ ] Audit 390 px/desktop admin layouts, small mobile screens, keyboard focus, semantic labels, 44 px targets, contrast, and reduced-motion CSS.
+- [ ] Search for forbidden behavior: student billing, readable passwords, hard deletion wording, nutrition actions for unverified roles, invented pricing, missing nutrients coerced to zero, and direct incompatible assessment comparison.
+- [ ] Run `npm test`, `npm run lint`, and `npm run build`; run `flutter analyze` and `flutter test` if Flutter is installed.
+- [ ] Document missing API/OpenAPI integration and human legal/clinical/content/accessibility/device review as pre-production work.
+- [ ] Commit with message `docs: finalize frontend implementation`.
