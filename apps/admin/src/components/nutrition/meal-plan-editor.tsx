@@ -17,7 +17,7 @@ import type {
 } from "@/lib/api-client";
 export function MealPlanEditor({ planId }: { planId?: string }) {
   const app = useAdminData(true);
-  const scope = `${app.context.tenantId}:${app.user.id}`;
+  const scope = `${app.context.tenantId}:${app.user.id}:${planId ?? "new"}`;
   return <Editor key={scope} app={app} planId={planId} />;
 }
 function Editor({
@@ -42,6 +42,7 @@ function Editor({
     [preview, setPreview] = useState(false),
     [checked, setChecked] = useState(false);
   const [revising, setRevising] = useState(false);
+  const [selectedVersionId, setSelectedVersionId] = useState<string>();
   const [freeDescription, setFreeDescription] = useState("");
   const [summaryDay, setSummaryDay] = useState(1);
   const [calculations, setCalculations] = useState<
@@ -73,6 +74,29 @@ function Editor({
   const plan = saved ?? existing;
   const student = students.find((s) => s.id === (plan?.student ?? studentId));
   const latest = plan?.versions.toSorted((a, b) => b.version - a.version)[0];
+  const displayedVersion =
+    plan?.versions.find((version) => version.id === selectedVersionId) ??
+    latest;
+  const historical = Boolean(
+    displayedVersion && latest && displayedVersion.id !== latest.id,
+  );
+  function startRevision() {
+    if (!plan || !latest || !allowed || busy || historical) return;
+    setStudent(plan.student);
+    setObjective(plan.objective);
+    setStarts(plan.starts_on);
+    setEnds(plan.ends_on ?? "");
+    setReview(plan.review_on ?? "");
+    setReason("");
+    setHydration(latest.hydration_guidance);
+    setGuidance(latest.complementary_guidance);
+    setMeals(structuredClone(latest.meal_slots));
+    setSelectedVersionId(undefined);
+    setSelectedMeal(0);
+    setPreview(false);
+    setChecked(false);
+    setRevising(true);
+  }
   const canAuthor = Boolean(
     membership?.roles.includes("nutritionist") &&
     user.nutritionRegistration?.status === "verified",
@@ -81,6 +105,7 @@ function Editor({
     student && canPublishMealPlan(user, membership, student),
   );
   const locked = !!plan && !revising;
+  const displayedMeals = locked ? (displayedVersion?.meal_slots ?? []) : meals;
   const version: MealVersionInput = {
     change_reason: reason,
     hydration_guidance: hydration,
@@ -173,6 +198,7 @@ function Editor({
           ],
         }));
       setSaved(next);
+      setSelectedVersionId(undefined);
       setRevising(false);
       setPreview(true);
     } catch (e) {
@@ -188,6 +214,7 @@ function Editor({
       !checked ||
       !latest ||
       !publishableVersion ||
+      historical ||
       latest.published_at
     )
       return;
@@ -251,7 +278,7 @@ function Editor({
       </p>
     );
   if (app.scopeError) return <p className="notice">{app.scopeError}</p>;
-  if (planId && !plan)
+  if ((planId && !plan) || (plan && !allowed))
     return (
       <ErrorState description="Plano não disponível nesta academia e neste escopo." />
     );
@@ -271,7 +298,8 @@ function Editor({
               <p>
                 {plan.objective} ·{" "}
                 {plan.status === "published" ? "Publicado" : "Rascunho"} ·
-                Versão {latest?.version}
+                Versão {displayedVersion?.version} · CRN {displayedVersion?.crn}
+                /{displayedVersion?.crn_state}
               </p>
               <p>
                 Vigência: {plan.starts_on} até {plan.ends_on || "Não definida"}{" "}
@@ -279,8 +307,8 @@ function Editor({
               </p>
               <p className="notice">
                 Rascunho salvo. A API não oferece edição das refeições já
-                salvas; para ajustes, publique e crie uma nova versão. Versões
-                publicadas são preservadas.
+                salvas; corrija em uma nova versão de rascunho, sem publicar o
+                conteúdo anterior. Todas as versões são preservadas.
               </p>
             </>
           ) : (
@@ -370,7 +398,7 @@ function Editor({
             </p>
           )}
           <h2>Refeições da semana</h2>
-          {(locked ? (latest?.meal_slots ?? []) : meals).map((meal, mi) => (
+          {displayedMeals.map((meal, mi) => (
             <article className="meal-card" key={mi}>
               <div className="section-header">
                 <h3>
@@ -541,7 +569,9 @@ function Editor({
                         <textarea
                           value={food.preparation}
                           onChange={(e) =>
-                            updateFood(mi, fi, { preparation: e.target.value })
+                            updateFood(mi, fi, {
+                              preparation: e.target.value,
+                            })
                           }
                         />
                       </label>
@@ -550,7 +580,9 @@ function Editor({
                         <textarea
                           value={food.observation}
                           onChange={(e) =>
-                            updateFood(mi, fi, { observation: e.target.value })
+                            updateFood(mi, fi, {
+                              observation: e.target.value,
+                            })
                           }
                         />
                       </label>
@@ -730,6 +762,31 @@ function Editor({
             </>
           ) : (
             <>
+              <label className="field">
+                Versão do plano
+                <select
+                  value={displayedVersion?.id ?? ""}
+                  onChange={(event) => {
+                    setSelectedVersionId(event.target.value);
+                    setChecked(false);
+                  }}
+                >
+                  {plan.versions
+                    .toSorted((a, b) => b.version - a.version)
+                    .map((version) => (
+                      <option key={version.id} value={version.id}>
+                        Versão {version.version} ·{" "}
+                        {version.published_at ? "Publicada" : "Rascunho"}
+                      </option>
+                    ))}
+                </select>
+              </label>
+              {historical && (
+                <p className="notice">
+                  Versão anterior em leitura. Para editar ou publicar, selecione
+                  a versão atual.
+                </p>
+              )}
               <ul className="record-list">
                 {plan.versions.map((v) => (
                   <li key={v.id}>
@@ -739,23 +796,25 @@ function Editor({
                   </li>
                 ))}
               </ul>
-              <p>{latest?.hydration_guidance}</p>
-              <p>{latest?.complementary_guidance}</p>
-              {!publishableVersion && (
+              <p>{displayedVersion?.hydration_guidance}</p>
+              <p>{displayedVersion?.complementary_guidance}</p>
+              {!historical && !publishableVersion && (
                 <p className="notice">
                   O plano precisa conter refeições e alimentos com porções
                   válidas antes da publicação.
                 </p>
               )}
-              <label className="checkbox-field">
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  onChange={(e) => setChecked(e.target.checked)}
-                />
-                Conferi alergias, restrições, porções, preparo e substituições
-                com o aluno.
-              </label>
+              {!historical && (
+                <label className="checkbox-field">
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={(e) => setChecked(e.target.checked)}
+                  />
+                  Conferi alergias, restrições, porções, preparo e substituições
+                  com o aluno.
+                </label>
+              )}
             </>
           )}
           {!locked && (
@@ -806,6 +865,8 @@ function Editor({
                   Salvar rascunho
                 </button>
               </>
+            ) : historical ? (
+              <p>Consulta de versão anterior em leitura.</p>
             ) : latest && !latest.published_at ? (
               <button
                 className="button button-primary"
@@ -819,28 +880,18 @@ function Editor({
                 <p role="status">
                   Versão publicada. O histórico permanece preservado.
                 </p>
-                <button
-                  className="button button-primary"
-                  disabled={!allowed || busy}
-                  onClick={() => {
-                    if (!plan || !latest) return;
-                    setStudent(plan.student);
-                    setObjective(plan.objective);
-                    setStarts(plan.starts_on);
-                    setEnds(plan.ends_on ?? "");
-                    setReview(plan.review_on ?? "");
-                    setReason("");
-                    setHydration(latest.hydration_guidance);
-                    setGuidance(latest.complementary_guidance);
-                    setMeals(structuredClone(latest.meal_slots));
-                    setPreview(false);
-                    setChecked(false);
-                    setRevising(true);
-                  }}
-                >
-                  Criar nova versão
-                </button>
               </div>
+            )}
+            {locked && !historical && (
+              <button
+                className="button"
+                disabled={!allowed || busy}
+                onClick={startRevision}
+              >
+                {latest?.published_at
+                  ? "Criar nova versão"
+                  : "Corrigir em nova versão"}
+              </button>
             )}
           </div>
           <Link href="/nutricao" className="button">

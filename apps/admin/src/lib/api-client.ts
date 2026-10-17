@@ -312,8 +312,11 @@ export class ApiClient {
       { method: "POST", body: JSON.stringify({ grams }) },
       tenant,
     );
-  getMealPlans = (tenant: string) =>
-    this.list<ApiMealPlan>("/api/nutrition/plans/", tenant);
+  getMealPlans = (tenant: string, studentId: string) =>
+    this.list<ApiMealPlan>(
+      `/api/nutrition/plans/?student=${encodeURIComponent(studentId)}`,
+      tenant,
+    );
   getMealPlan = (tenant: string, id: string) =>
     this.request<ApiMealPlan>(
       `/api/nutrition/plans/${encodeURIComponent(id)}/`,

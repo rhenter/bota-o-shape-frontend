@@ -10,6 +10,8 @@ import type {
   ApiConsent,
 } from "@/lib/api-client";
 import { demoFoodRecord, demoMealPlanRecord } from "@/lib/nutrition";
+import { authorizedNutritionStudentIds } from "@/lib/nutrition-authorization";
+import { canPublishMealPlan } from "@/lib/permissions";
 interface Data {
   credentials: ApiCredential[];
   assignments: ApiDietitianAssignment[];
@@ -38,7 +40,8 @@ export function useAdminData(nutrition = false) {
   const [snapshot, setSnapshot] = useState<{ scope: string; data: Data }>();
   const [failure, setFailure] = useState<{ scope: string; message: string }>();
   const [revision, setRevision] = useState(0);
-  const scope = `${context.tenantId}:${context.userId}:${isAdmin}:${nutrition}:${revision}`;
+  const clinicalRole = Boolean(membership?.roles.includes("nutritionist"));
+  const scope = `${context.tenantId}:${context.userId}:${isAdmin}:${clinicalRole}:${nutrition}:${revision}`;
   useEffect(() => {
     if (mode !== "api" || !context.tenantId || !isAdmin) return;
     let active = true;
@@ -46,13 +49,28 @@ export function useAdminData(nutrition = false) {
       api.getCredentials(context.tenantId),
       api.getDietitianAssignments(context.tenantId),
       api.getMemberships(context.tenantId),
-      nutrition && membership?.roles.includes("nutritionist")
-        ? api.getMealPlans(context.tenantId)
-        : Promise.resolve([]),
       nutrition ? api.getFoods(context.tenantId) : Promise.resolve([]),
       nutrition ? api.getConsents(context.tenantId) : Promise.resolve([]),
     ])
-      .then(([credentials, assignments, members, plans, foods, consents]) => {
+      .then(async ([credentials, assignments, members, foods, consents]) => {
+        if (!active) return;
+        const studentIds =
+          nutrition && clinicalRole
+            ? authorizedNutritionStudentIds(
+                context.userId,
+                members,
+                credentials,
+                assignments,
+                consents,
+              )
+            : new Set<string>();
+        const scopedPlans = await Promise.all(
+          [...studentIds].map(async (studentId) => {
+            const plans = await api.getMealPlans(context.tenantId, studentId);
+            return plans.filter((plan) => plan.student === studentId);
+          }),
+        );
+        const plans = scopedPlans.flat();
         if (active)
           setSnapshot({
             scope,
@@ -77,7 +95,8 @@ export function useAdminData(nutrition = false) {
     isAdmin,
     scope,
     nutrition,
-    membership?.roles,
+    clinicalRole,
+    context.userId,
   ]);
   const data = snapshot?.scope === scope ? snapshot.data : empty;
   const sessionPlans = app.demoNutrition[context.tenantId] ?? [];
@@ -134,15 +153,23 @@ export function useAdminData(nutrition = false) {
             ),
           }))
         : [];
+  const clinicalStudents = students.filter((student) =>
+    canPublishMealPlan(user, membership, student),
+  );
+  const readableStudentIds = new Set(
+    clinicalStudents.map((student) => student.id),
+  );
   return {
     ...app,
     user,
-    students,
+    students: nutrition ? clinicalStudents : students,
     isAdmin,
     data: {
       ...data,
       foods: mode === "demo" ? demoFoods : data.foods,
-      plans: mode === "demo" ? demoPlans : data.plans,
+      plans: (mode === "demo" ? demoPlans : data.plans).filter((plan) =>
+        readableStudentIds.has(plan.student),
+      ),
     },
     error: failure?.scope === scope ? failure.message : "",
     loading:
