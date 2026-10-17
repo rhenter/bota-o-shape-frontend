@@ -24,6 +24,7 @@ function Content() {
     canWrite,
     trainingLoading,
     trainingError,
+    studentDataError,
     refreshTraining,
     updateDemo,
     repository,
@@ -132,12 +133,14 @@ function Content() {
               </Link>
               {canWrite && template.status === "published" && (
                 <>
-                  <Link
-                    className="button"
-                    href={`/treinos/atribuir?id=${encodeURIComponent(template.id)}`}
-                  >
-                    Atribuir
-                  </Link>
+                  {!studentDataError && (
+                    <Link
+                      className="button"
+                      href={`/treinos/atribuir?id=${encodeURIComponent(template.id)}`}
+                    >
+                      Atribuir
+                    </Link>
+                  )}
                   <button
                     disabled={busy}
                     className="button button-quiet"
@@ -161,8 +164,14 @@ function Content() {
       )}
       <section className="card section-space">
         <h2>Treinos atribuídos</h2>
-        {!data.assignments.length && (
-          <p className="muted">Nenhuma atribuição registrada nesta academia.</p>
+        {studentDataError ? (
+          <p className="notice">{studentDataError}</p>
+        ) : (
+          !data.assignments.length && (
+            <p className="muted">
+              Nenhuma atribuição registrada nesta academia.
+            </p>
+          )
         )}
         <ul className="record-list">
           {data.assignments.map((a) => (
@@ -186,7 +195,9 @@ function Content() {
       </section>
       <section className="card section-space">
         <h2>Sessões registradas</h2>
-        {!data.sessions.length ? (
+        {studentDataError ? (
+          <p className="notice">{studentDataError}</p>
+        ) : !data.sessions.length ? (
           <p className="muted">Nenhuma sessão recebida do app do aluno.</p>
         ) : (
           <ul className="record-list">

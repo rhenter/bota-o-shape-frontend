@@ -5,15 +5,14 @@ import { AppShell, useAppContext } from "@/components/app-shell";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState, ErrorState, LoadingState } from "@/components/states";
 import { useTrainingData } from "@/components/use-training-data";
-const dateKey = (date: Date) =>
-  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+import { assessmentDateKey, assessmentTimeZone } from "@/lib/dates";
 function weekDays(anchor: string) {
-  const start = new Date(`${anchor}T12:00:00`);
-  start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+  const start = new Date(`${anchor}T12:00:00Z`);
+  start.setUTCDate(start.getUTCDate() - ((start.getUTCDay() + 6) % 7));
   return Array.from({ length: 7 }, (_, i) => {
     const day = new Date(start);
-    day.setDate(start.getDate() + i);
-    return dateKey(day);
+    day.setUTCDate(start.getUTCDate() + i);
+    return day.toISOString().slice(0, 10);
   });
 }
 export default function AgendaPage() {
@@ -30,10 +29,10 @@ function Content() {
     repository,
     context,
     trainingLoading,
-    trainingError,
+    studentDataError: trainingError,
     refreshTraining,
   } = useTrainingData();
-  const [anchor, setAnchor] = useState(() => dateKey(new Date()));
+  const [anchor, setAnchor] = useState(() => assessmentDateKey(new Date()));
   const [view, setView] = useState("week");
   const [kind, setKind] = useState("all");
   const students = repository.getStudents(context);
@@ -66,10 +65,11 @@ function Content() {
       ]),
     ...data.assessments.map((a) => ({
       id: a.id,
-      date: dateKey(new Date(a.assessed_at)),
+      date: assessmentDateKey(a.assessed_at),
       type: "assessment",
       title: `Avaliação registrada · ${name(a.student)}`,
       detail: new Date(a.assessed_at).toLocaleTimeString("pt-BR", {
+        timeZone: assessmentTimeZone,
         hour: "2-digit",
         minute: "2-digit",
       }),
@@ -83,9 +83,9 @@ function Content() {
     (e) => view === "list" || days.includes(e.date),
   );
   function move(offset: number) {
-    const next = new Date(`${anchor}T12:00:00`);
-    next.setDate(next.getDate() + offset);
-    setAnchor(dateKey(next));
+    const next = new Date(`${anchor}T12:00:00Z`);
+    next.setUTCDate(next.getUTCDate() + offset);
+    setAnchor(next.toISOString().slice(0, 10));
   }
   if (trainingLoading) return <LoadingState />;
   if (trainingError)
@@ -166,7 +166,7 @@ function Content() {
                 </button>
                 <button
                   className="button"
-                  onClick={() => setAnchor(dateKey(new Date()))}
+                  onClick={() => setAnchor(assessmentDateKey(new Date()))}
                 >
                   Hoje
                 </button>

@@ -29,6 +29,7 @@ function Content({ templateId }: { templateId?: string }) {
     updateDemo,
     trainingLoading,
     trainingError,
+    studentDataError,
     refreshTraining,
   } = useTrainingData();
   const [saved, setSaved] = useState<ApiWorkoutTemplate>();
@@ -95,7 +96,7 @@ function Content({ templateId }: { templateId?: string }) {
         setSaved(result);
       }
       setMessage(
-        `${mode === "demo" ? "Demonstração: " : ""}versão ${result.version} ${result.status === "published" ? "publicada. Atribua este modelo a um aluno." : "salva como rascunho."}`,
+        `${mode === "demo" ? "Demonstração: " : ""}versão ${result.version} ${result.status === "published" ? (studentDataError ? "publicada. A atribuição depende do acesso aos alunos vinculados." : "publicada. Atribua este modelo a um aluno.") : "salva como rascunho."}`,
       );
     } catch (error) {
       if (persistedDraft) {
@@ -130,7 +131,7 @@ function Content({ templateId }: { templateId?: string }) {
       {message && (
         <p className="notice" role="status">
           {message}{" "}
-          {saved?.status === "published" && (
+          {saved?.status === "published" && !studentDataError && (
             <Link href={`/treinos/atribuir?id=${saved.id}`}>
               Atribuir treino
             </Link>

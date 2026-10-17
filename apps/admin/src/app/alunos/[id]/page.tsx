@@ -29,7 +29,7 @@ function StudentProfile({ id }: { id: string }) {
     api,
     data,
     trainingLoading,
-    trainingError,
+    studentDataError: trainingError,
     refreshTraining,
   } = useTrainingData();
   const student = repository

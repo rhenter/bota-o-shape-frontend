@@ -2,12 +2,16 @@
 import { useState } from "react";
 import type { ApiAssessment, ApiMeasurement } from "@/lib/api-client";
 import { compatibleMeasurements, measurementMethod } from "@/lib/assessments";
+import { assessmentDateKey, assessmentTimeZone } from "@/lib/dates";
+
 export function sameDevice(a: ApiAssessment, b: ApiAssessment, method: string) {
   if (method !== "bioimpedance") return true;
   const hasIdentity = (device: ApiAssessment["device"]) =>
-    Object.values(device).some((value) =>
-      typeof value === "string" ? value.trim() !== "" : value != null,
-    );
+    typeof device.brand === "string" &&
+    device.brand.trim() !== "" &&
+    typeof device.model === "string" &&
+    device.model.trim() !== "";
+  // The backend has no stable device identifier; retain a conservative exact match.
   const identity = (device: ApiAssessment["device"]) =>
     JSON.stringify(
       Object.entries(device).sort(([left], [right]) =>
@@ -37,8 +41,8 @@ export function AssessmentChart({
       (a) =>
         a.student === current.student &&
         ["completed", "released"].includes(a.status) &&
-        (!from || a.assessed_at.slice(0, 10) >= from) &&
-        (!to || a.assessed_at.slice(0, 10) <= to),
+        (!from || assessmentDateKey(a.assessed_at) >= from) &&
+        (!to || assessmentDateKey(a.assessed_at) <= to),
     )
     .sort((a, b) => a.assessed_at.localeCompare(b.assessed_at))
     .map((a) => ({
@@ -94,7 +98,8 @@ export function AssessmentChart({
       <p className="help-text">
         {measurementMethod(metric.method)} · unidade: {metric.unit}. Apenas
         avaliações concluídas ou liberadas. Lacunas indicam ausência de medida
-        compatível; não há equivalência entre aparelhos de bioimpedância.
+        compatível; não há equivalência entre aparelhos de bioimpedância. Datas
+        no horário de São Paulo.
       </p>
       {valid.length > 0 && (
         <svg
@@ -146,7 +151,9 @@ export function AssessmentChart({
             {points.map((p) => (
               <tr key={p.assessment.id}>
                 <td>
-                  {new Date(p.assessment.assessed_at).toLocaleString("pt-BR")}
+                  {new Date(p.assessment.assessed_at).toLocaleString("pt-BR", {
+                    timeZone: assessmentTimeZone,
+                  })}
                 </td>
                 <td>
                   {p.measurement

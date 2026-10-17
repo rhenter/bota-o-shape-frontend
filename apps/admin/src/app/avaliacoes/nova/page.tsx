@@ -37,7 +37,7 @@ function Content() {
     mode,
     canWrite,
     trainingLoading,
-    trainingError,
+    studentDataError: trainingError,
     refreshTraining,
     updateDemo,
   } = useTrainingData();
@@ -116,7 +116,7 @@ function Content() {
       <form
         onSubmit={async (event) => {
           event.preventDefault();
-          if (busy || !protocol) return;
+          if (trainingError || busy || !protocol) return;
           const form = new FormData(event.currentTarget);
           setError("");
           const measurements = rows.map((row) => ({

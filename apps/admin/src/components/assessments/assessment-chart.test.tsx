@@ -72,3 +72,44 @@ describe("gráfico acessível", () => {
     ).toBe(false);
   });
 });
+
+it.each([
+  { brand: "A" },
+  { model: "1" },
+  { brand: "A", model: "  " },
+  { notes: "mesmo aparelho" },
+  { hydration: "normal" },
+  { brand: 123, model: "1" },
+])("não aceita identidade incompleta ou metadado irrelevante: %o", (device) => {
+  expect(sameDevice({ ...a, device }, { ...c, device }, "bioimpedance")).toBe(
+    false,
+  );
+});
+it("compara identidade explícita e completa", () => {
+  expect(
+    sameDevice(
+      { ...a, device: { brand: "A", model: "1" } },
+      { ...c, device: { brand: "A", model: "1" } },
+      "bioimpedance",
+    ),
+  ).toBe(true);
+});
+it("filtra pela data exibida em São Paulo em torno da meia-noite UTC", async () => {
+  const user = userEvent.setup();
+  const before = { ...a, id: "before", assessed_at: "2026-10-02T02:59:00Z" };
+  const after = { ...c, id: "after", assessed_at: "2026-10-02T03:00:00Z" };
+  render(<AssessmentChart assessments={[before, after]} current={after} />);
+  await user.type(screen.getByLabelText("De"), "2026-10-01");
+  await user.type(screen.getByLabelText("Até"), "2026-10-01");
+  const table = screen.getByRole("table");
+  expect(within(table).getAllByRole("row")).toHaveLength(2);
+  expect(within(table).getByText("01/10/2026, 23:59:00")).toBeVisible();
+  expect(within(table).queryByText("80 cm")).not.toBeInTheDocument();
+  await user.clear(screen.getByLabelText("De"));
+  await user.type(screen.getByLabelText("De"), "2026-10-02");
+  await user.clear(screen.getByLabelText("Até"));
+  await user.type(screen.getByLabelText("Até"), "2026-10-02");
+  expect(within(table).getAllByRole("row")).toHaveLength(2);
+  expect(within(table).getByText("02/10/2026, 00:00:00")).toBeVisible();
+  expect(within(table).queryByText("82 cm")).not.toBeInTheDocument();
+});

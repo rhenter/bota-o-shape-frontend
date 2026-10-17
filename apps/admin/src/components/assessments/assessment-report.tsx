@@ -1,4 +1,5 @@
 "use client";
+import { assessmentTimeZone } from "@/lib/dates";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AppShell, useAppContext } from "@/components/app-shell";
@@ -49,7 +50,7 @@ function Content({ assessmentId }: { assessmentId?: string }) {
     repository,
     canWrite,
     trainingLoading,
-    trainingError,
+    studentDataError: trainingError,
     refreshTraining,
     updateDemo,
   } = useTrainingData();
@@ -65,7 +66,8 @@ function Content({ assessmentId }: { assessmentId?: string }) {
     data.assessments.find((a) => a.id === assessmentId) ??
     (!assessmentId ? data.assessments[0] : undefined);
   useEffect(() => {
-    if (mode !== "api" || current?.status !== "released") return;
+    if (mode !== "api" || trainingError || current?.status !== "released")
+      return;
     let active = true;
     api
       .getAssessmentReport(context.tenantId, current.id)
@@ -91,6 +93,7 @@ function Content({ assessmentId }: { assessmentId?: string }) {
     current?.id,
     current?.status,
     reportRevision,
+    trainingError,
   ]);
   if (trainingLoading) return <LoadingState />;
   if (trainingError)
@@ -114,7 +117,7 @@ function Content({ assessmentId }: { assessmentId?: string }) {
   const target = nextStatus[current.status];
   const students = repository.getStudents(context);
   async function transition() {
-    if (!current || !target || busy || !confirmed) return;
+    if (trainingError || !current || !target || busy || !confirmed) return;
     setBusy(true);
     setMessage("");
     try {
@@ -171,7 +174,11 @@ function Content({ assessmentId }: { assessmentId?: string }) {
         <dl className="details-list">
           <div>
             <dt>Data e hora</dt>
-            <dd>{new Date(current.assessed_at).toLocaleString("pt-BR")}</dd>
+            <dd>
+              {new Date(current.assessed_at).toLocaleString("pt-BR", {
+                timeZone: assessmentTimeZone,
+              })}
+            </dd>
           </div>
           <div>
             <dt>Avaliador</dt>

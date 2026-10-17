@@ -1,4 +1,5 @@
 "use client";
+import { assessmentTimeZone } from "@/lib/dates";
 import Link from "next/link";
 import { useState } from "react";
 import { AppShell, useAppContext } from "@/components/app-shell";
@@ -23,7 +24,7 @@ function Content() {
     repository,
     canWrite,
     trainingLoading,
-    trainingError,
+    studentDataError: trainingError,
     refreshTraining,
   } = useTrainingData();
   const [student, setStudent] = useState("all");
@@ -85,7 +86,11 @@ function Content() {
               </h2>
               <StatusBadge status={assessment.status} />
             </div>
-            <p>{new Date(assessment.assessed_at).toLocaleString("pt-BR")}</p>
+            <p>
+              {new Date(assessment.assessed_at).toLocaleString("pt-BR", {
+                timeZone: assessmentTimeZone,
+              })}
+            </p>
             <p className="muted">
               {[
                 ...new Set(

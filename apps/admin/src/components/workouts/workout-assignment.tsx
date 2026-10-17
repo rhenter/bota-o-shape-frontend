@@ -22,7 +22,7 @@ function Content({ templateId }: { templateId?: string }) {
     mode,
     canWrite,
     trainingLoading,
-    trainingError,
+    studentDataError: trainingError,
     refreshTraining,
     updateDemo,
   } = useTrainingData();
@@ -71,7 +71,7 @@ function Content({ templateId }: { templateId?: string }) {
           className="card assignment-form"
           onSubmit={async (event) => {
             event.preventDefault();
-            if (busy || confirmed) return;
+            if (trainingError || busy || confirmed) return;
             const form = new FormData(event.currentTarget);
             const input = {
               template: String(form.get("template")),
