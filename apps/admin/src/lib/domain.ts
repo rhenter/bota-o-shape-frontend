@@ -40,9 +40,10 @@ export interface TenantRecord {
 }
 
 export interface Student extends TenantRecord {
+  membershipId?: string;
   name: string;
   email: string;
-  status: "active" | "archived";
+  status: "active" | "archived" | "inactive" | "invited";
   coachIds: readonly string[];
   dietitianIds: readonly string[];
   nutritionConsent: boolean;
@@ -51,9 +52,10 @@ export interface Student extends TenantRecord {
 }
 
 export interface Equipment extends TenantRecord {
+  description?: string;
   name: string;
   location: string;
-  status: "available" | "maintenance";
+  status: "available" | "maintenance" | "inactive";
 }
 
 export interface Exercise extends TenantRecord {
@@ -61,12 +63,12 @@ export interface Exercise extends TenantRecord {
   primaryMuscle: string;
   secondaryMuscles: readonly string[];
   equipmentIds: readonly string[];
-  recordType: "load_reps" | "bodyweight_reps" | "duration" | "distance";
+  recordType: "load_reps" | "bodyweight_reps" | "duration" | "distance" | "activity";
   preparation: string;
   instructions: readonly string[];
   breathing: string;
   commonMistakes: readonly string[];
-  status: "draft" | "in_review" | "approved";
+  status: "draft" | "in_review" | "approved" | "reviewed" | "archived";
 }
 
 export interface SetPrescription {
