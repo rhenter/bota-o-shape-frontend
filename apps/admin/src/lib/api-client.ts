@@ -1,4 +1,19 @@
 import type {
+  ApiCredential,
+  ApiDietitianAssignment,
+  ApiFood,
+  FoodSnapshot,
+  ApiMealPlan,
+  MealPlanInput,
+  MealVersionInput,
+  ApiMealVersion,
+  ApiSubscription,
+  ApiInvoice,
+  ApiEntitlement,
+  ApiUnit,
+} from "./admin-contracts";
+export type * from "./admin-contracts";
+import type {
   ApiWorkoutTemplate,
   WorkoutTemplateInput,
   ApiWorkoutAssignment,
@@ -253,6 +268,105 @@ export class ApiClient {
     }
     return items;
   }
+  getCredentials = (tenant: string) =>
+    this.list<ApiCredential>("/api/tenancy/credentials/", tenant);
+  saveCredential = (
+    tenant: string,
+    data: Omit<ApiCredential, "id" | "verified_at">,
+  ) =>
+    this.request<ApiCredential>(
+      "/api/tenancy/credentials/",
+      { method: "POST", body: JSON.stringify(data) },
+      tenant,
+    );
+  verifyCredential = (tenant: string, id: string) =>
+    this.request<ApiCredential>(
+      `/api/tenancy/credentials/${encodeURIComponent(id)}/verify/`,
+      { method: "POST" },
+      tenant,
+    );
+  getDietitianAssignments = (tenant: string) =>
+    this.list<ApiDietitianAssignment>(
+      "/api/tenancy/dietitian-assignments/",
+      tenant,
+    );
+  saveDietitianAssignment = (
+    tenant: string,
+    data: Omit<ApiDietitianAssignment, "id">,
+  ) =>
+    this.request<ApiDietitianAssignment>(
+      "/api/tenancy/dietitian-assignments/",
+      { method: "POST", body: JSON.stringify(data) },
+      tenant,
+    );
+  getFoods = (tenant: string) => this.list<ApiFood>("/api/food/foods/", tenant);
+  getFood = (tenant: string, id: string) =>
+    this.request<ApiFood>(
+      `/api/food/foods/${encodeURIComponent(id)}/`,
+      {},
+      tenant,
+    );
+  calculateFood = (tenant: string, id: string, grams: string) =>
+    this.request<FoodSnapshot>(
+      `/api/food/foods/${encodeURIComponent(id)}/calculate/`,
+      { method: "POST", body: JSON.stringify({ grams }) },
+      tenant,
+    );
+  getMealPlans = (tenant: string) =>
+    this.list<ApiMealPlan>("/api/nutrition/plans/", tenant);
+  getMealPlan = (tenant: string, id: string) =>
+    this.request<ApiMealPlan>(
+      `/api/nutrition/plans/${encodeURIComponent(id)}/`,
+      {},
+      tenant,
+    );
+  createMealPlan = (tenant: string, data: MealPlanInput) =>
+    this.request<ApiMealPlan>(
+      "/api/nutrition/plans/",
+      { method: "POST", body: JSON.stringify(data) },
+      tenant,
+    );
+  publishMealPlan = (tenant: string, id: string) =>
+    this.request<ApiMealPlan>(
+      `/api/nutrition/plans/${encodeURIComponent(id)}/publish/`,
+      { method: "POST" },
+      tenant,
+    );
+  reviseMealPlan = (tenant: string, id: string, data: MealVersionInput) =>
+    this.request<ApiMealVersion>(
+      `/api/nutrition/plans/${encodeURIComponent(id)}/revise/`,
+      { method: "POST", body: JSON.stringify(data) },
+      tenant,
+    );
+  getSubscriptions = (tenant: string) =>
+    this.list<ApiSubscription>("/api/billing/subscriptions/", tenant);
+  getInvoices = (tenant: string) =>
+    this.list<ApiInvoice>("/api/billing/invoices/", tenant);
+  getEntitlements = (tenant: string) =>
+    this.list<ApiEntitlement>("/api/billing/entitlements/", tenant);
+  openBilling = (
+    tenant: string,
+    id: string,
+    action: "portal" | "checkout",
+    returnUrl: string,
+  ) =>
+    this.request<{ url: string }>(
+      `/api/billing/subscriptions/${encodeURIComponent(id)}/${action}/`,
+      { method: "POST", body: JSON.stringify({ return_url: returnUrl }) },
+      tenant,
+    );
+  getUnits = (tenant: string) =>
+    this.list<ApiUnit>("/api/tenancy/units/", tenant);
+  saveUnit = (
+    tenant: string,
+    id: string,
+    data: Pick<ApiUnit, "name" | "is_active">,
+  ) =>
+    this.request<ApiUnit>(
+      `/api/tenancy/units/${encodeURIComponent(id)}/`,
+      { method: "PATCH", body: JSON.stringify(data) },
+      tenant,
+    );
   getWorkoutTemplates = (tenant: string) =>
     this.list<ApiWorkoutTemplate>("/api/workouts/templates/", tenant);
   getWorkoutTemplate = (tenant: string, id: string) =>

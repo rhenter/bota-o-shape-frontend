@@ -17,6 +17,13 @@ const navigation = [
   { href: "/treinos", label: "Treinos", icon: "↔" },
   { href: "/avaliacoes", label: "Avaliações", icon: "◉" },
   { href: "/agenda", label: "Agenda", icon: "▤" },
+  { href: "/nutricao", label: "Nutrição", icon: "♧" },
+];
+const extraCrumbs = [
+  { href: "/equipe", label: "Equipe" },
+  { href: "/auditoria", label: "Auditoria" },
+  { href: "/configuracoes/assinatura", label: "Assinatura da academia" },
+  { href: "/configuracoes", label: "Configurações" },
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -182,14 +189,44 @@ export function AppShell({ children }: { children: ReactNode }) {
             </Link>
           ))}
         </nav>
-        <div className="sidebar-upcoming">
-          <span>Em próximas etapas</span>
-          <p>Nutrição</p>
-          {membership?.roles.includes("admin") && <p>Equipe e configurações</p>}
-          {canManageBilling(user, membership, tenant.id) && (
-            <p>Cobrança da academia</p>
+        <nav aria-label="Administração e preferências">
+          {membership?.roles.includes("admin") && (
+            <>
+              <Link
+                href="/equipe"
+                aria-current={pathname === "/equipe" ? "page" : undefined}
+                onClick={() => setMenuOpen(false)}
+              >
+                ♙ Equipe
+              </Link>
+              <Link
+                href="/auditoria"
+                aria-current={pathname === "/auditoria" ? "page" : undefined}
+                onClick={() => setMenuOpen(false)}
+              >
+                ▤ Auditoria
+              </Link>
+            </>
           )}
-        </div>
+          <Link
+            href="/configuracoes"
+            aria-current={pathname === "/configuracoes" ? "page" : undefined}
+            onClick={() => setMenuOpen(false)}
+          >
+            ⚙ Configurações
+          </Link>
+          {canManageBilling(user, membership, tenant.id) && (
+            <Link
+              href="/configuracoes/assinatura"
+              aria-current={
+                pathname === "/configuracoes/assinatura" ? "page" : undefined
+              }
+              onClick={() => setMenuOpen(false)}
+            >
+              ◫ Assinatura da academia
+            </Link>
+          )}
+        </nav>
         <div className="sidebar-footer">
           <strong>{tenant.name}</strong>
           <small>{tenant.cnpj}</small>
@@ -219,8 +256,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         )}
         <p className="breadcrumb">
           Painel <span aria-hidden="true">/</span>{" "}
-          {navigation.find((item) => pathname.startsWith(item.href))?.label ??
-            "Visão geral"}
+          {[...navigation, ...extraCrumbs].find((item) =>
+            pathname.startsWith(item.href),
+          )?.label ?? "Visão geral"}
         </p>
         {loading ? (
           <LoadingState />

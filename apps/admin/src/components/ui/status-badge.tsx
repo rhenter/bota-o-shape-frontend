@@ -12,6 +12,15 @@ const labels: Record<string, string> = {
   published: "Publicado",
   completed: "Concluída",
   released: "Liberada",
+  paused: "Pausado",
+  superseded: "Substituído",
+  pilot: "Piloto",
+  trial: "Período de teste",
+  past_due: "Pagamento pendente",
+  delinquent: "Inadimplente",
+  cancel_scheduled: "Cancelamento agendado",
+  cancelled: "Cancelada",
+  suspended: "Suspensa",
 };
 export function StatusBadge({
   status,

@@ -118,6 +118,9 @@ function demoExerciseRecord(item: Exercise): ApiExercise {
 }
 
 function useAppValue(mode: "demo" | "api") {
+  const [demoNutrition, setDemoNutrition] = useState<
+    Record<string, import("@/lib/api-client").ApiMealPlan[]>
+  >({});
   const [demoTraining, setDemoTraining] = useState<
     Record<string, TrainingData>
   >({});
@@ -296,6 +299,7 @@ function useAppValue(mode: "demo" | "api") {
   }
   async function logout() {
     setDemoTraining({});
+    setDemoNutrition({});
     generation.current++;
     setSnapshot(emptySnapshot);
     setTenants([]);
@@ -393,6 +397,8 @@ function useAppValue(mode: "demo" | "api") {
           getSubscription: () => undefined,
         };
   return {
+    demoNutrition,
+    setDemoNutrition,
     demoTraining,
     setDemoTraining,
     context,

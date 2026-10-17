@@ -1645,3 +1645,48 @@ button:disabled {
     grid-template-columns: minmax(0, 1fr) 340px;
   }
 }
+
+.nutrition-portfolio {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 20px;
+}
+.meal-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin: 16px 0;
+}
+.planned-food {
+  padding: 16px 0;
+  border-top: 1px solid var(--border);
+}
+.detail-list > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 1px solid var(--border);
+  padding: 10px 0;
+}
+.detail-list dd {
+  margin: 0;
+  text-align: right;
+}
+.detail-list dt {
+  color: var(--text-muted);
+}
+.checkbox-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0;
+}
+.checkbox-field input {
+  width: 20px;
+  min-height: 20px;
+}
+fieldset {
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  margin: 16px 0;
+}
