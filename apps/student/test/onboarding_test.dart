@@ -34,5 +34,26 @@ void main() {
     expect(saved!.consents['health_data'], isFalse);
     expect(saved!.consents['nutrition'], isFalse);
     expect(saved!.notifications, isFalse);
+    expect(saved!.changedConsentPurposes, {'coach_progress'});
   });
+
+  testWidgets('Continue preserves existing grants without marking them as changed', (tester) async {
+    OnboardingChoices? saved;
+    await tester.pumpWidget(MaterialApp(home: OnboardingPage(
+      academy: 'Academia Horizonte',
+      initial: const OnboardingChoices(consents: {'health_data': true, 'coach_progress': false,
+        'nutrition': false, 'progress_photos': false}),
+      onSave: (choices) async { saved = choices; },
+    )));
+    await tester.scrollUntilVisible(find.text('Uso de dados de saúde para acompanhamento'), 200);
+    final grant = tester.widget<SwitchListTile>(find.ancestor(
+      of: find.text('Uso de dados de saúde para acompanhamento'), matching: find.byType(SwitchListTile)));
+    expect(grant.value, isTrue);
+    await tester.scrollUntilVisible(find.text('Continuar'), 200);
+    await tester.tap(find.text('Continuar'));
+    await tester.pump();
+    expect(saved!.consents['health_data'], isTrue);
+    expect(saved!.changedConsentPurposes, isEmpty);
+  });
+
 }

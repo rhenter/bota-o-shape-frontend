@@ -21,6 +21,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
   late bool _notifications = widget.initial.notifications;
   late bool _largeText = widget.initial.largeText;
   late final Map<String, bool> _consents = Map.from(widget.initial.consents);
+  final Set<String> _changedConsentPurposes = {};
   bool _saving = false;
   String? _error;
   @override
@@ -32,6 +33,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
       await widget.onSave(skip ? const OnboardingChoices(skipped: true) : OnboardingChoices(
         name: _name.text.trim(), goal: _goal, daysPerWeek: _days,
         notifications: _notifications, largeText: _largeText, consents: Map.from(_consents),
+        changedConsentPurposes: Set.from(_changedConsentPurposes),
       ));
     } catch (_) {
       if (mounted) setState(() { _error = 'Não foi possível salvar. Confira a conexão e tente novamente.'; });
@@ -63,7 +65,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
       SwitchListTile(contentPadding: EdgeInsets.zero, title: const Text('Texto ampliado (opcional)'),
         value: _largeText, onChanged: _saving ? null : (v) => setState(() { _largeText = v; })),
       const SizedBox(height: 16), Text('Consentimentos e privacidade', style: Theme.of(context).textTheme.titleLarge),
-      const Text('Uma finalidade por escolha. Recusar não bloqueia o acesso ao treino. Nenhuma escolha vem marcada.'),
+      const Text('Uma finalidade por escolha. Recusar não bloqueia o acesso ao treino. Novas finalidades começam desativadas. Escolhas anteriores são preservadas.'),
       for (final entry in const {
         'health_data': 'Uso de dados de saúde para acompanhamento',
         'coach_progress': 'Compartilhar progresso com meu professor',
@@ -71,7 +73,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
         'progress_photos': 'Guardar fotos privadas de progresso',
       }.entries)
         SwitchListTile(contentPadding: EdgeInsets.zero, title: Text(entry.value),
-          value: _consents[entry.key] ?? false, onChanged: _saving ? null : (v) => setState(() { _consents[entry.key] = v; })),
+          value: _consents[entry.key] ?? false, onChanged: _saving ? null : (v) => setState(() { _consents[entry.key] = v; _changedConsentPurposes.add(entry.key); })),
       const Text('Suas escolhas podem ser revogadas nesta tela pelo Perfil. Nenhuma foto ou medida é solicitada aqui.'),
       const SizedBox(height: 16),
       const Text('Nome preferido, objetivo, dias e acessibilidade ficam neste aparelho. Não geramos prescrições com essas escolhas.'),

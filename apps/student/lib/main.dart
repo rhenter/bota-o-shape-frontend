@@ -52,6 +52,7 @@ class StudentAccessGate extends StatefulWidget {
 
 class _StudentAccessGateState extends State<StudentAccessGate> {
   StudentGateway? _gateway;
+  OnboardingChoices _initialChoices = const OnboardingChoices();
   List<AcademyAccess>? _academies;
   bool _loading = true, _onboarded = false;
   String? _error;
@@ -78,7 +79,7 @@ class _StudentAccessGateState extends State<StudentAccessGate> {
     try {
       final gateway = await widget.session!.activate(academy);
       final choices = await gateway.onboarding();
-      if (mounted) setState(() { _gateway = gateway; _onboarded = choices != null; });
+      if (mounted) setState(() { _gateway = gateway; _initialChoices = choices ?? const OnboardingChoices(); _onboarded = choices?.completed == true; });
     } catch (error) {
       if (mounted) setState(() { _error = error is ApiFailure ? error.message : 'Não foi possível selecionar a academia.'; });
     } finally { if (mounted) setState(() { _loading = false; }); }
@@ -103,7 +104,7 @@ class _StudentAccessGateState extends State<StudentAccessGate> {
   Widget build(BuildContext context) {
     if (_loading) return const Scaffold(body: Center(child: CircularProgressIndicator(semanticsLabel: 'Validando seu acesso')));
     if (_gateway != null) {
-      if (!_onboarded) return OnboardingPage(academy: _gateway!.identity.academy,
+      if (!_onboarded) return OnboardingPage(academy: _gateway!.identity.academy, initial: _initialChoices,
         onSave: (choices) async {
           await _gateway!.saveOnboarding(choices);
           if (mounted) setState(() { _onboarded = true; });
@@ -123,7 +124,7 @@ class _StudentAccessGateState extends State<StudentAccessGate> {
       ]));
     return AccessPage(session: widget.session, onLogin: _login, initialError: _error,
       onDemo: widget.demoEnabled ? () => setState(() {
-        _gateway = DemoStudentGateway(); _onboarded = false; _error = null;
+        _gateway = DemoStudentGateway(); _initialChoices = const OnboardingChoices(); _onboarded = false; _error = null;
       }) : null);
   }
 }

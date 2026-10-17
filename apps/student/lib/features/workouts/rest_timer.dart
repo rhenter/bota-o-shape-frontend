@@ -15,12 +15,13 @@ class RestTimer extends StatefulWidget {
 class _RestTimerState extends State<RestTimer> with WidgetsBindingObserver {
   late int _remaining = widget.seconds;
   DateTime get _now => widget.now?.call() ?? DateTime.now();
-  late DateTime _deadline = _now.add(Duration(seconds: _remaining));
+  late DateTime _deadline;
   bool _paused = false;
   Timer? _ticker;
   @override
   void initState() {
     super.initState();
+    _deadline = _now.add(Duration(seconds: _remaining));
     WidgetsBinding.instance.addObserver(this);
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
   }

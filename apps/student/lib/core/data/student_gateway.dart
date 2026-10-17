@@ -52,6 +52,9 @@ class ApiStudentGateway implements StudentGateway {
   String get _cacheKey => 'student.workouts.v1.$storageNamespace';
 
   Future<void> _checkMembership() async {
+    if (client.tenantId != identity.tenantId) {
+      throw const ApiFailure('Selecione a academia deste registro antes de sincronizar.', status: 403);
+    }
     final memberships = await client.list('api/tenancy/memberships/');
     final valid = memberships.any((m) => m['user'] == identity.id && m['status'] == 'active' &&
         (m['roles'] as List<dynamic>).contains('student'));
@@ -150,9 +153,10 @@ class ApiStudentGateway implements StudentGateway {
   @override
   Future<OnboardingChoices?> onboarding() async {
     final raw = await store.read(_onboardingKey);
-    if (raw == null) return null;
-    final saved = jsonDecode(raw) as Map<String, dynamic>;
+    // A new device still has to honor grants recorded by the server.
     final records = await client.list('api/tenancy/consents/');
+    final saved = raw == null ? <String, dynamic>{...const OnboardingChoices().toJson()}
+        : jsonDecode(raw) as Map<String, dynamic>;
     final purposes = (saved['consents'] as Map<String, dynamic>).keys;
     saved['consents'] = <String, dynamic>{for (final purpose in purposes)
       purpose: records.any((c) => c['subject'] == identity.id && c['purpose'] == purpose && c['granted'] == true)};
@@ -163,11 +167,12 @@ class ApiStudentGateway implements StudentGateway {
   Future<void> saveOnboarding(OnboardingChoices choices) async {
     // Retry/update known records instead of granting a second copy on every edit.
     if (choices.skipped) {
-      await store.write(_onboardingKey, jsonEncode(choices.toJson()));
+      await store.write(_onboardingKey, jsonEncode({...choices.toJson(), 'completed': true}));
       return;
     }
-    final existing = await client.list('api/tenancy/consents/');
-    for (final entry in choices.consents.entries) {
+    final changed = choices.consents.entries.where((entry) => choices.changedConsentPurposes.contains(entry.key)).toList();
+    final existing = changed.isEmpty ? <Map<String, dynamic>>[] : await client.list('api/tenancy/consents/');
+    for (final entry in changed) {
       final records = existing.where((c) => c['subject'] == identity.id && c['purpose'] == entry.key).toList();
       if (!entry.value) {
         for (final record in records.where((c) => c['granted'] == true)) {
@@ -181,7 +186,7 @@ class ApiStudentGateway implements StudentGateway {
         });
       }
     }
-    await store.write(_onboardingKey, jsonEncode(choices.toJson()));
+    await store.write(_onboardingKey, jsonEncode({...choices.toJson(), 'completed': true}));
   }
 }
 
@@ -231,7 +236,9 @@ class DemoStudentGateway implements StudentGateway {
     return result;
   }
   @override
-  Future<void> saveOnboarding(OnboardingChoices choices) async { _choices = choices; }
+  Future<void> saveOnboarding(OnboardingChoices choices) async {
+    _choices = OnboardingChoices.fromJson({...choices.toJson(), 'completed': true});
+  }
   @override
   Future<OnboardingChoices?> onboarding() async => _choices;
 }

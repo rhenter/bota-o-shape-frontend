@@ -9,7 +9,6 @@ class AcademyAccess {
 class SessionRepository {
   SessionRepository(this.client);
   final ApiClient client;
-  String? _userId;
 
   Future<List<AcademyAccess>> restore() async {
     if (!await client.restore()) return [];
@@ -22,26 +21,31 @@ class SessionRepository {
   }
 
   Future<List<AcademyAccess>> academies() async {
-    client.tenantId = null;
+    // Listing available academies must not invalidate an existing gateway.
     final items = await client.list('api/tenancy/tenants/');
     return items.map((t) => AcademyAccess(t['id'] as String, t['name'] as String)).toList();
   }
 
   Future<ApiStudentGateway> activate(AcademyAccess academy) async {
+    final previousTenant = client.tenantId;
     client.tenantId = academy.id;
-    // JWT claim identifies the candidate account; server membership confirms access.
-    _userId = client.userId;
-    final memberships = await client.list('api/tenancy/memberships/');
-    final valid = memberships.any((m) => m['user'] == _userId && m['status'] == 'active' &&
-        (m['roles'] as List<dynamic>).contains('student'));
-    if (!valid) {
-      client.tenantId = null;
-      throw const ApiFailure('Este app é exclusivo para alunos com vínculo ativo. A equipe usa o painel web.', status: 403);
+    try {
+      // JWT claim identifies the candidate account; server membership confirms access.
+      final userId = client.userId;
+      final memberships = await client.list('api/tenancy/memberships/');
+      final valid = memberships.any((m) => m['user'] == userId && m['status'] == 'active' &&
+          (m['roles'] as List<dynamic>).contains('student'));
+      if (!valid) {
+        throw const ApiFailure('Este app é exclusivo para alunos com vínculo ativo. A equipe usa o painel web.', status: 403);
+      }
+      final profile = (await client.request('GET', 'api/user/users/$userId/'))! as Map<String, dynamic>;
+      final name = '${profile['first_name']} ${profile['last_name']}'.trim();
+      return ApiStudentGateway(client: client, store: client.store, identity: StudentIdentity(
+        id: userId, tenantId: academy.id, name: name.isEmpty ? 'Aluno' : name, academy: academy.name));
+    } catch (_) {
+      client.tenantId = previousTenant;
+      rethrow;
     }
-    final profile = (await client.request('GET', 'api/user/users/$_userId/'))! as Map<String, dynamic>;
-    final name = '${profile['first_name']} ${profile['last_name']}'.trim();
-    return ApiStudentGateway(client: client, store: client.store, identity: StudentIdentity(
-      id: _userId!, tenantId: academy.id, name: name.isEmpty ? 'Aluno' : name, academy: academy.name));
   }
 
   Future<void> acceptInvite({required String token, required String password, required String firstName}) async {

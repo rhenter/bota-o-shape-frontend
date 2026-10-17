@@ -4,6 +4,7 @@ import 'package:bota_o_shape_student/features/home/student_shell.dart';
 import 'package:bota_o_shape_student/features/workouts/rest_timer.dart';
 import 'package:bota_o_shape_student/features/workouts/workout_controller.dart';
 import 'package:bota_o_shape_student/features/workouts/workout_pages.dart';
+import 'package:bota_o_shape_student/features/workouts/workout_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -45,6 +46,7 @@ void main() {
     expect(find.text('01:00'), findsOneWidget);
     now = now.add(const Duration(seconds: 1));
     await tester.pump(const Duration(seconds: 1));
+    expect(find.text('00:59'), findsOneWidget);
     await tester.tap(find.byTooltip('Pausar descanso'));
     now = now.add(const Duration(seconds: 2));
     await tester.pump(const Duration(seconds: 2));
@@ -146,4 +148,37 @@ void main() {
     expect(queue.pending.single.status, SyncStatus.conflict);
     expect(queue.pending.single.payload, item.payload);
   });
+
+  testWidgets('resume before the first timer tick retains the original deadline', (tester) async {
+    var now = DateTime(2026, 10, 17);
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: RestTimer(seconds: 60, now: () => now))));
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    now = now.add(const Duration(seconds: 15));
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+    expect(find.text('00:45'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('prescribed effort and cadence survive cache projection without filling recorded RPE', (tester) async {
+    final target = SetTarget.fromJson({
+      'id': 'target', 'order': 1, 'repetitions_min': 8, 'repetitions_max': 12,
+      'rest_seconds': 60, 'rpe': '7.5', 'rir': 2, 'cadence': '3-1-1',
+    });
+    final cached = SetTarget.fromJson(target.toJson().cast<String, dynamic>());
+    expect(cached.rpe, 7.5);
+    expect(cached.rir, 2);
+    expect(cached.cadence, '3-1-1');
+    await tester.pumpWidget(MaterialApp(home: Scaffold(body: SingleChildScrollView(child: SetEntryCard(
+      target: cached, trackingType: 'load_reps', onRecord: (_) {},
+    )))));
+    expect(find.textContaining('RPE prescrito 7.5'), findsOneWidget);
+    expect(find.textContaining('RIR prescrito 2'), findsOneWidget);
+    expect(find.textContaining('Cadência prescrita 3-1-1'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('RPE realizado 0–10 (opcional)'), 200);
+    final rpe = tester.widget<TextFormField>(find.ancestor(
+      of: find.text('RPE realizado 0–10 (opcional)'), matching: find.byType(TextFormField)));
+    expect(rpe.controller!.text, isEmpty);
+  });
+
 }

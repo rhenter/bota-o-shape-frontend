@@ -241,7 +241,7 @@ class _SetEntryCardState extends State<SetEntryCard> {
     if (['load_reps', 'bodyweight_reps', 'substitution'].contains(widget.trackingType)) 'repetitions': 'Repetições',
     if (['duration', 'activity', 'distance', 'substitution'].contains(widget.trackingType)) 'duration_seconds': 'Duração (s)',
     if (['distance', 'substitution'].contains(widget.trackingType)) 'distance_meters': 'Distância (m)',
-    'rpe': 'RPE 0–10 (opcional)',
+    'rpe': 'RPE realizado 0–10 (opcional)',
   };
   String? _validate(String field, String? value) {
     if (value == null || value.trim().isEmpty) return null;

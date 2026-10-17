@@ -5,11 +5,14 @@ double? number(Object? value) => value == null ? null : double.tryParse('$value'
 
 class SetTarget {
   const SetTarget({required this.id, required this.order, this.minReps, this.maxReps,
-    this.loadKg, this.durationSeconds, this.distanceMeters, this.restSeconds = 0, this.note = ''});
+    this.loadKg, this.durationSeconds, this.distanceMeters, this.restSeconds = 0, this.note = '',
+    this.rpe, this.rir, this.cadence = ''});
   final String id;
   final int order;
   final int? minReps, maxReps, durationSeconds;
-  final double? loadKg, distanceMeters;
+  final double? loadKg, distanceMeters, rpe;
+  final int? rir;
+  final String cadence;
   final int restSeconds;
   final String note;
   String get label => [
@@ -18,6 +21,9 @@ class SetTarget {
     if (durationSeconds != null) '$durationSeconds s',
     if (distanceMeters != null) '$distanceMeters m',
     '$restSeconds s descanso',
+    if (rpe != null) 'RPE prescrito $rpe',
+    if (rir != null) 'RIR prescrito $rir',
+    if (cadence.isNotEmpty) 'Cadência prescrita $cadence',
   ].join(' · ');
   factory SetTarget.fromJson(Map<String, dynamic> json) => SetTarget(
     id: json['id'] as String, order: json['order'] as int,
@@ -25,10 +31,11 @@ class SetTarget {
     loadKg: number(json['load_kg']), durationSeconds: json['duration_seconds'] as int?,
     distanceMeters: number(json['distance_meters']), restSeconds: json['rest_seconds'] as int? ?? 0,
     note: json['note'] as String? ?? '',
+    rpe: number(json['rpe']), rir: json['rir'] as int?, cadence: json['cadence'] as String? ?? '',
   );
   Map<String, Object?> toJson() => {'id': id, 'order': order, 'repetitions_min': minReps,
     'repetitions_max': maxReps, 'load_kg': loadKg, 'duration_seconds': durationSeconds,
-    'distance_meters': distanceMeters, 'rest_seconds': restSeconds, 'note': note};
+    'distance_meters': distanceMeters, 'rest_seconds': restSeconds, 'note': note, 'rpe': rpe, 'rir': rir, 'cadence': cadence};
 }
 
 class AssignedExercise {

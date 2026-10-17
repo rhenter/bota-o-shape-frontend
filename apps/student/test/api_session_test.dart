@@ -6,6 +6,7 @@ import 'package:bota_o_shape_student/core/data/student_gateway.dart';
 import 'package:bota_o_shape_student/core/storage/private_store.dart';
 import 'package:bota_o_shape_student/features/auth/session_repository.dart';
 import 'package:bota_o_shape_student/features/onboarding/onboarding_choices.dart';
+import 'package:bota_o_shape_student/features/workouts/workout_models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 String jwt(String id) => 'header.${base64Url.encode(utf8.encode(jsonEncode({'user_id': id})))}.signature';
@@ -84,11 +85,75 @@ void main() {
     final gateway = ApiStudentGateway(client: client, store: client.store,
       identity: const StudentIdentity(id: 'student', tenantId: 'academy', name: 'Aluno', academy: 'Academia'));
     client.tenantId = 'academy';
-    await gateway.saveOnboarding(const OnboardingChoices());
+    await gateway.saveOnboarding(const OnboardingChoices(changedConsentPurposes: {'health_data'}));
     expect(writes.length, 1);
     expect(writes.single['path'], '/api/tenancy/consents/grant/revoke/');
     writes.clear();
     await gateway.saveOnboarding(const OnboardingChoices(skipped: true));
     expect(writes, isEmpty);
   });
+
+  test('failed academy discovery and activation preserve the prior tenant for pending sync', () async {
+    var failAcademies = false;
+    final sentTenants = <String?>[];
+    final client = ApiClient(baseUrl: Uri.parse('https://api.example/'), store: MemoryPrivateStore(),
+      sender: (method, uri, headers, body) async {
+        if (uri.path.endsWith('/token/')) return ApiResponse(200, {'access': jwt('student'), 'refresh': 'r'});
+        if (uri.path.endsWith('/tenants/')) {
+          if (failAcademies) throw const ApiFailure('Sem conexão.');
+          return const ApiResponse(200, [{'id': 'academy-a', 'name': 'Academia A'}]);
+        }
+        if (uri.path.endsWith('/memberships/')) {
+          if (headers['X-Tenant-ID'] == 'academy-b') return const ApiResponse(403, {});
+          return const ApiResponse(200, [{'user': 'student', 'status': 'active', 'roles': ['student']}]);
+        }
+        if (method == 'POST' && uri.path.endsWith('/sessions/')) {
+          sentTenants.add(headers['X-Tenant-ID']);
+          return ApiResponse(201, body);
+        }
+        return const ApiResponse(200, []);
+      });
+    final sessions = SessionRepository(client);
+    await sessions.login('student@example.com', 'password');
+    client.tenantId = 'academy-a';
+    final gateway = ApiStudentGateway(client: client, store: client.store,
+      identity: const StudentIdentity(id: 'student', tenantId: 'academy-a', name: 'Aluno', academy: 'Academia A'));
+    failAcademies = true;
+    await expectLater(sessions.academies(), throwsA(isA<ApiFailure>()));
+    expect(client.tenantId, 'academy-a');
+    await expectLater(sessions.activate(const AcademyAccess('academy-b', 'Academia B')), throwsA(isA<ApiFailure>()));
+    expect(client.tenantId, 'academy-a');
+    final pending = PendingWorkout(payload: {'idempotency_key': 'same-key', 'exercise_logs': []});
+    await gateway.submit(pending);
+    expect(sentTenants, ['academy-a']);
+    client.tenantId = 'academy-b';
+    await expectLater(gateway.submit(pending), throwsA(isA<ApiFailure>()));
+    expect(sentTenants, ['academy-a']);
+  });
+
+  test('new device loads server grants and untouched Continue never revokes them', () async {
+    final writes = <String>[];
+    final client = ApiClient(baseUrl: Uri.parse('https://api.example/'), store: MemoryPrivateStore(),
+      sender: (method, uri, _, _) async {
+        if (method == 'GET') return const ApiResponse(200, [
+          {'id': 'existing', 'subject': 'student', 'purpose': 'health_data', 'granted': true},
+        ]);
+        writes.add(uri.path);
+        return const ApiResponse(200, {});
+      });
+    client.tenantId = 'academy';
+    final gateway = ApiStudentGateway(client: client, store: client.store,
+      identity: const StudentIdentity(id: 'student', tenantId: 'academy', name: 'Aluno', academy: 'Academia'));
+    final choices = (await gateway.onboarding())!;
+    expect(choices.completed, isFalse);
+    expect(choices.consents['health_data'], isTrue);
+    expect(choices.changedConsentPurposes, isEmpty);
+    await gateway.saveOnboarding(choices);
+    expect(writes, isEmpty);
+    expect((await gateway.onboarding())!.completed, isTrue);
+    // Even an out-of-date untouched local value cannot revoke a server grant.
+    await gateway.saveOnboarding(const OnboardingChoices());
+    expect(writes, isEmpty);
+  });
+
 }
