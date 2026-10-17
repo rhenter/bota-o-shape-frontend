@@ -1,0 +1,14 @@
+node_modules/
+.next/
+out/
+coverage/
+*.tsbuildinfo
+.env*
+!.env.example
+.DS_Store
+.dart_tool/
+.flutter-plugins-dependencies
+build/
+apps/student/android/local.properties
+apps/student/ios/Flutter/Generated.xcconfig
+apps/student/ios/Flutter/flutter_export_environment.sh
