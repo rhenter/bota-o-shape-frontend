@@ -1,12 +1,14 @@
 "use client";
 import {
   createContext,
+  useEffect,
+  useCallback,
   useContext,
   useRef,
   useState,
   type ReactNode,
 } from "react";
-import { apiClient, type ApiMuscle } from "@/lib/api-client";
+import { apiClient, type ApiMuscle, type ApiExercise } from "@/lib/api-client";
 import {
   demoIds,
   demoRepository,
@@ -53,15 +55,93 @@ export const configuredMode =
     ? "demo"
     : "api";
 
+function exerciseView(
+  item: ApiExercise,
+  tenantId: string,
+  muscleName: (id: string) => string,
+): Exercise {
+  return {
+    id: item.id,
+    tenantId,
+    name: item.name,
+    primaryMuscle: item.primary_muscles.map(muscleName).join(", "),
+    secondaryMuscles: item.secondary_muscles.map(muscleName),
+    equipmentIds: item.equipment,
+    recordType: item.tracking_type,
+    preparation:
+      typeof item.instructions.preparation === "string"
+        ? item.instructions.preparation
+        : "",
+    instructions: Array.isArray(item.instructions.steps)
+      ? item.instructions.steps.filter(
+          (step): step is string => typeof step === "string",
+        )
+      : [],
+    breathing:
+      typeof item.instructions.breathing === "string"
+        ? item.instructions.breathing
+        : "",
+    commonMistakes: Array.isArray(item.instructions.commonMistakes)
+      ? item.instructions.commonMistakes.filter(
+          (step): step is string => typeof step === "string",
+        )
+      : [],
+    status: item.review_status,
+  };
+}
+
+function demoExerciseRecord(item: Exercise): ApiExercise {
+  return {
+    id: item.id,
+    name: item.name,
+    description: "",
+    movement_pattern: "",
+    instructions: {
+      preparation: item.preparation,
+      steps: [...item.instructions],
+      breathing: item.breathing,
+      commonMistakes: [...item.commonMistakes],
+    },
+    tracking_type: item.recordType,
+    review_status:
+      item.status === "archived"
+        ? "archived"
+        : item.status === "reviewed" || item.status === "approved"
+          ? "reviewed"
+          : "draft",
+    equipment: [...item.equipmentIds],
+    primary_muscles: [item.primaryMuscle].filter(Boolean),
+    secondary_muscles: [...item.secondaryMuscles],
+  };
+}
+
 function useAppValue(mode: "demo" | "api") {
   const [tenantId, selectTenant] = useState<string>(
     mode === "demo" ? demoIds.tenant : "",
   );
+  const [demoExerciseChanges, setDemoExerciseChanges] = useState<
+    { tenantId: string; exercise: ApiExercise }[]
+  >([]);
   const [liveTenants, setTenants] = useState<Tenant[]>([]);
   const [snapshot, setSnapshot] = useState<Snapshot>(emptySnapshot);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [sessionActive, setSessionActive] = useState(apiClient.authenticated);
   const generation = useRef(0);
+  useEffect(() => {
+    if (mode !== "api") return;
+    return apiClient.subscribeSession((active) => {
+      setSessionActive(active);
+      if (!active) {
+        generation.current++;
+        setSnapshot(emptySnapshot);
+        setTenants([]);
+        selectTenant("");
+        setLoading(false);
+        setError("");
+      }
+    });
+  }, [mode]);
   const demoUser = demoRepository.getUser(demoIds.user)!;
   const user = mode === "demo" ? demoUser : snapshot.user;
   const tenants =
@@ -165,34 +245,7 @@ function useAppValue(mode: "demo" | "api") {
           location: "Não informado pela API",
           status: item.is_active ? "available" : "inactive",
         })),
-        exercises: exercises.map((item) => ({
-          id: item.id,
-          tenantId: id,
-          name: item.name,
-          primaryMuscle: item.primary_muscles.map(muscleName).join(", "),
-          secondaryMuscles: item.secondary_muscles.map(muscleName),
-          equipmentIds: item.equipment,
-          recordType: item.tracking_type,
-          preparation:
-            typeof item.instructions.preparation === "string"
-              ? item.instructions.preparation
-              : "",
-          instructions: Array.isArray(item.instructions.steps)
-            ? item.instructions.steps.filter(
-                (step): step is string => typeof step === "string",
-              )
-            : [],
-          breathing:
-            typeof item.instructions.breathing === "string"
-              ? item.instructions.breathing
-              : "",
-          commonMistakes: Array.isArray(item.instructions.commonMistakes)
-            ? item.instructions.commonMistakes.filter(
-                (step): step is string => typeof step === "string",
-              )
-            : [],
-          status: item.review_status,
-        })),
+        exercises: exercises.map((item) => exerciseView(item, id, muscleName)),
       };
       if (generation.current === requestGeneration) setSnapshot(next);
     } catch (failure) {
@@ -240,7 +293,8 @@ function useAppValue(mode: "demo" | "api") {
     generation.current++;
     setSnapshot(emptySnapshot);
     setTenants([]);
-    selectTenant("");
+    selectTenant(mode === "demo" ? demoIds.tenant : "");
+    setDemoExerciseChanges([]);
     setError("");
     setLoading(false);
     if (mode === "api") await apiClient.logout();
@@ -251,9 +305,68 @@ function useAppValue(mode: "demo" | "api") {
       scope.userId === user.id &&
       scope.tenantId === tenant.id,
     );
+  const getExercise = useCallback(
+    async (id: string): Promise<ApiExercise> => {
+      if (mode === "api") return apiClient.getExercise(tenantId, id);
+      const changed = demoExerciseChanges.find(
+        (item) => item.tenantId === tenantId && item.exercise.id === id,
+      );
+      if (changed) return structuredClone(changed.exercise);
+      const item = demoRepository
+        .getExercises({ userId: demoIds.user, tenantId })
+        .find((exercise) => exercise.id === id);
+      if (!item) throw new Error("Exercício não encontrado na academia ativa.");
+      return demoExerciseRecord(item);
+    },
+    [mode, tenantId, demoExerciseChanges],
+  );
+
+  async function saveExercise(
+    data: Omit<ApiExercise, "id">,
+    id?: string,
+  ): Promise<ApiExercise> {
+    if (
+      membership?.status !== "active" ||
+      !membership.roles.some((role) => role === "admin" || role === "professor")
+    )
+      throw new Error(
+        "Você não tem permissão para editar exercícios nesta academia.",
+      );
+    if (mode === "api") return apiClient.saveExercise(tenantId, data, id);
+    if (id) await getExercise(id);
+    const saved = { ...structuredClone(data), id: id ?? crypto.randomUUID() };
+    setDemoExerciseChanges((items) => [
+      ...items.filter(
+        (item) => item.tenantId !== tenantId || item.exercise.id !== saved.id,
+      ),
+      { tenantId, exercise: saved },
+    ]);
+    return saved;
+  }
+
   const repository: Repository =
     mode === "demo"
-      ? demoRepository
+      ? {
+          ...demoRepository,
+          getExercises: (scope) => {
+            if (!demoRepository.getMembership(scope)) return [];
+            const changes = demoExerciseChanges.filter(
+              (item) => item.tenantId === scope.tenantId,
+            );
+            const base = demoRepository
+              .getExercises(scope)
+              .filter(
+                (item) =>
+                  !changes.some((change) => change.exercise.id === item.id),
+              );
+            return [
+              ...base,
+              ...changes.map((item) =>
+                exerciseView(item.exercise, scope.tenantId, (name) => name),
+              ),
+            ];
+          },
+        }
       : {
           mode: "api",
           getUser: (id) => snapshot.team.find((item) => item.id === id),
@@ -289,7 +402,9 @@ function useAppValue(mode: "demo" | "api") {
     reload: () => loadTenant(tenant.id, apiClient.userId),
     api: apiClient,
     muscles: snapshot.muscles,
-    authenticated: mode === "demo" || apiClient.authenticated,
+    getExercise,
+    saveExercise,
+    authenticated: mode === "demo" || sessionActive,
   };
 }
 

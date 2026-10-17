@@ -293,6 +293,14 @@ function ExerciseLibrary() {
           <p className="help-text">
             Mídia não disponível. As instruções textuais permanecem acessíveis.
           </p>
+          {canWrite && selected.status !== "archived" && (
+            <Link
+              className="button button-primary full-width"
+              href={`/exercicios/${selected.id}/editar`}
+            >
+              Editar exercício
+            </Link>
+          )}
           <button
             className="button full-width"
             onClick={() => setSelected(null)}

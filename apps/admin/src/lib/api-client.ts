@@ -75,6 +75,7 @@ export class ApiError extends Error {
 export class ApiClient {
   private tokens: Tokens | null = null;
   private refreshing: Promise<void> | null = null;
+  private sessionListeners = new Set<(authenticated: boolean) => void>();
   constructor(
     private baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ??
       "http://127.0.0.1:8000",
@@ -82,6 +83,16 @@ export class ApiClient {
   ) {}
   get authenticated() {
     return this.tokens !== null;
+  }
+  subscribeSession(listener: (authenticated: boolean) => void) {
+    this.sessionListeners.add(listener);
+    return () => {
+      this.sessionListeners.delete(listener);
+    };
+  }
+  private setSession(tokens: Tokens | null) {
+    this.tokens = tokens;
+    for (const listener of this.sessionListeners) listener(this.authenticated);
   }
   // This is an identifier hint only. The API authorizes every subsequent request.
   get userId(): string | undefined {
@@ -98,16 +109,17 @@ export class ApiClient {
     }
   }
   clearSession() {
-    this.tokens = null;
+    this.setSession(null);
   }
   async login(email: string, password: string) {
     this.clearSession();
-    this.tokens = await this.request<Tokens>(
+    const tokens = await this.request<Tokens>(
       "/api/user/auth/token/",
       { method: "POST", body: JSON.stringify({ email, password }) },
       undefined,
       false,
     );
+    this.setSession(tokens);
   }
   async logout() {
     const refresh = this.tokens?.refresh;
@@ -132,7 +144,7 @@ export class ApiClient {
         false,
       );
       // Do not restore a session that was explicitly closed while refresh was pending.
-      if (this.tokens?.refresh === refresh) this.tokens = tokens;
+      if (this.tokens?.refresh === refresh) this.setSession(tokens);
     } catch (error) {
       this.clearSession();
       throw error;
@@ -251,6 +263,12 @@ export class ApiClient {
     this.list<ApiEquipment>("/api/workouts/equipment/", tenant);
   getExercises = (tenant: string) =>
     this.list<ApiExercise>("/api/workouts/exercises/", tenant);
+  getExercise = (tenant: string, id: string) =>
+    this.request<ApiExercise>(
+      `/api/workouts/exercises/${encodeURIComponent(id)}/`,
+      {},
+      tenant,
+    );
   getMuscles = (tenant: string) =>
     this.list<ApiMuscle>("/api/workouts/muscle-groups/", tenant);
   getCoachAssignments = (tenant: string) =>

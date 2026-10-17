@@ -1,8 +1,11 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { apiClient } from "@/lib/api-client";
 import { DemoProvider, useAppContext } from "./app-context";
+import { AppShell } from "./app-shell";
+
+vi.mock("next/navigation", () => ({ usePathname: () => "/dashboard" }));
 
 const token = `header.${btoa(JSON.stringify({ user_id: "u1" }))}.signature`;
 const page = (results: unknown[]) =>
@@ -97,6 +100,75 @@ function mockApi(role = "owner") {
 }
 
 describe("snapshot da API por academia", () => {
+  it.each(["refresh recusado", "repetição recusada"])(
+    "remove o painel e os dados em cache após %s",
+    async (failure) => {
+      const healthyApi = mockApi();
+      let expired = false;
+      vi.stubGlobal(
+        "fetch",
+        vi.fn<typeof fetch>().mockImplementation(async (input, init) => {
+          if (!expired) return healthyApi(input, init);
+          if (
+            String(input).endsWith("auth/token/refresh/") &&
+            failure === "repetição recusada"
+          ) {
+            return new Response(
+              JSON.stringify({ access: token, refresh: "r2" }),
+            );
+          }
+          return new Response("{}", { status: 401 });
+        }),
+      );
+      function OpenPanel() {
+        const { login, context, repository, membership } = useAppContext();
+        return (
+          <>
+            <button
+              onClick={() => {
+                void login("owner@example.test", "test-password");
+              }}
+            >
+              Entrar
+            </button>
+            <AppShell>
+              {repository.getStudents(context).map((student) => (
+                <p key={student.id}>{student.name}</p>
+              ))}
+            </AppShell>
+            <output>
+              Cache: {repository.getStudents(context).length}; vínculo:{" "}
+              {membership ? "presente" : "ausente"}
+            </output>
+          </>
+        );
+      }
+      const user = userEvent.setup();
+      render(
+        <DemoProvider mode="api">
+          <OpenPanel />
+        </DemoProvider>,
+      );
+      await user.click(screen.getByRole("button", { name: "Entrar" }));
+      expect(await screen.findByText("Aluno A")).toBeVisible();
+      expired = true;
+      // A background transport call has no component-local state update to hide the bug.
+      await act(async () => {
+        await expect(apiClient.getEquipment("t1")).rejects.toThrow();
+      });
+      expect(
+        await screen.findByRole("heading", {
+          name: "Entre para acessar o painel",
+        }),
+      ).toBeVisible();
+      expect(screen.queryByText("Aluno A")).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("navigation", { name: "Navegação principal" }),
+      ).not.toBeInTheDocument();
+      expect(screen.getByText("Cache: 0; vínculo: ausente")).toBeVisible();
+    },
+  );
+
   it("mapeia owner sem confiar nas claims para conceder papel e troca o snapshot", async () => {
     vi.stubGlobal("fetch", mockApi());
     const user = userEvent.setup();
