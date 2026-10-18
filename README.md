@@ -1,10 +1,13 @@
 <h1 align="center">Bota o Shape!</h1>
 
 <p align="center">
-  <a href="https://github.com/rhenter/bota-o-shape-frontend/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/rhenter/bota-o-shape-frontend/actions/workflows/ci.yml/badge.svg" /></a>
-  <a href="https://codecov.io/gh/rhenter/bota-o-shape-frontend"><img alt="Test coverage" src="https://codecov.io/gh/rhenter/bota-o-shape-frontend/branch/main/graph/badge.svg" /></a>
-  <img alt="React 19.3.1" src="https://img.shields.io/badge/React-19.3.1-61DAFB?logo=react&logoColor=white" />
-  <img alt="Flutter 3.47.7" src="https://img.shields.io/badge/Flutter-3.47.7-02569B?logo=flutter&logoColor=white" />
+  <a href="https://github.com/rhenter/bota-o-shape-frontend/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/rhenter/bota-o-shape-frontend/actions/workflows/ci.yml/badge.svg?branch=main" /></a>
+  <a href="https://github.com/rhenter/bota-o-shape-frontend/actions"><img alt="Coverage" src="https://rhenter.github.io/bota-o-shape-frontend/badges/coverage.svg" /></a>
+  <a href="https://nodejs.org/"><img alt="Node.js 24.15.0" src="https://img.shields.io/badge/node.js-24.15.0-5FA04E?logo=nodedotjs&logoColor=white" /></a>
+  <a href="https://react.dev/"><img alt="React 19.3.1" src="https://img.shields.io/badge/react-19.3.1-61DAFB?logo=react&logoColor=black" /></a>
+  <a href="https://flutter.dev/"><img alt="Flutter 3.47.7" src="https://img.shields.io/badge/flutter-3.47.7-02569B?logo=flutter&logoColor=white" /></a>
+  <a href="LICENSE"><img alt="Proprietary license" src="https://img.shields.io/badge/license-proprietary-red.svg" /></a>
+  <a href="apps/admin/package.json"><img alt="Project version 0.1.0" src="https://img.shields.io/badge/version-0.1.0-blue.svg" /></a>
 </p>
 
 <p align="center">
@@ -57,7 +60,6 @@
 ### Automation
 
 - **[GitHub Actions](https://github.com/features/actions)**
-- **[Codecov](https://about.codecov.io)**
 
 ---
 
@@ -173,4 +175,4 @@ Portuguese versions use the `.pt.md` suffix.
 
 ## 📝 License
 
-This project is licensed under the **MIT License**. See [LICENSE](LICENSE) for details.
+This project is proprietary software. See [LICENSE](LICENSE) for details.
