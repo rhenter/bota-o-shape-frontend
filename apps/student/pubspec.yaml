@@ -1,10 +1,11 @@
 name: bota_o_shape_student
-description: App do aluno Bota o Shape! — acesso pela academia e execução de treinos.
+description: Bota o Shape student app for gym access and workout execution.
 publish_to: none
 version: 0.1.0+1
 
 environment:
   sdk: '>=3.8.0 <4.0.0'
+  flutter: 3.47.7
 
 dependencies:
   flutter:

@@ -14,7 +14,8 @@ class SecurePrivateStore implements PrivateStore {
   @override
   Future<String?> read(String key) => _storage.read(key: key);
   @override
-  Future<void> write(String key, String value) => _storage.write(key: key, value: value);
+  Future<void> write(String key, String value) =>
+      _storage.write(key: key, value: value);
   @override
   Future<void> delete(String key) => _storage.delete(key: key);
 }
@@ -25,7 +26,12 @@ class MemoryPrivateStore implements PrivateStore {
   @override
   Future<String?> read(String key) async => _values[key];
   @override
-  Future<void> write(String key, String value) async { _values[key] = value; }
+  Future<void> write(String key, String value) async {
+    _values[key] = value;
+  }
+
   @override
-  Future<void> delete(String key) async { _values.remove(key); }
+  Future<void> delete(String key) async {
+    _values.remove(key);
+  }
 }

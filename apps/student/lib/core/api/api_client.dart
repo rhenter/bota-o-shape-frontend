@@ -19,19 +19,36 @@ class ApiResponse {
   final Object? data;
 }
 
-typedef ApiSender = Future<ApiResponse> Function(
-  String method, Uri uri, Map<String, String> headers, Object? body,
-);
+typedef ApiSender =
+    Future<ApiResponse> Function(
+      String method,
+      Uri uri,
+      Map<String, String> headers,
+      Object? body,
+    );
 
 /// Native iOS/Android transport. No tokens in URLs, logs or build arguments.
 class NativeApiSender {
-  final HttpClient _client = HttpClient()..connectionTimeout = const Duration(seconds: 20);
+  final HttpClient _client = HttpClient()
+    ..connectionTimeout = const Duration(seconds: 20);
 
-  Future<ApiResponse> send(String method, Uri uri, Map<String, String> headers, Object? body) async {
+  Future<ApiResponse> send(
+    String method,
+    Uri uri,
+    Map<String, String> headers,
+    Object? body,
+  ) async {
     try {
-      return await _send(method, uri, headers, body).timeout(const Duration(seconds: 30));
+      return await _send(
+        method,
+        uri,
+        headers,
+        body,
+      ).timeout(const Duration(seconds: 30));
     } on SocketException {
-      throw const ApiFailure('Sem conexão. Seus registros pendentes continuam neste aparelho.');
+      throw const ApiFailure(
+        'Sem conexão. Seus registros pendentes continuam neste aparelho.',
+      );
     } on TimeoutException {
       throw const ApiFailure('A conexão demorou. Tente novamente.');
     } on HandshakeException {
@@ -41,7 +58,12 @@ class NativeApiSender {
     }
   }
 
-  Future<ApiResponse> _send(String method, Uri uri, Map<String, String> headers, Object? body) async {
+  Future<ApiResponse> _send(
+    String method,
+    Uri uri,
+    Map<String, String> headers,
+    Object? body,
+  ) async {
     final request = await _client.openUrl(method, uri);
     request.followRedirects = false;
     headers.forEach(request.headers.set);
@@ -50,8 +72,13 @@ class NativeApiSender {
     final text = await utf8.decoder.bind(response).join();
     Object? data;
     if (text.isNotEmpty) {
-      try { data = jsonDecode(text); } on FormatException {
-        throw ApiFailure('Resposta inválida da API.', status: response.statusCode);
+      try {
+        data = jsonDecode(text);
+      } on FormatException {
+        throw ApiFailure(
+          'Resposta inválida da API.',
+          status: response.statusCode,
+        );
       }
     }
     return ApiResponse(response.statusCode, data);
@@ -82,26 +109,40 @@ class ApiClient {
   String get userId {
     try {
       final part = _access!.split('.')[1];
-      final claims = jsonDecode(utf8.decode(base64Url.decode(base64Url.normalize(part)))) as Map<String, dynamic>;
+      final claims =
+          jsonDecode(utf8.decode(base64Url.decode(base64Url.normalize(part))))
+              as Map<String, dynamic>;
       return claims['user_id'] as String;
     } catch (_) {
-      throw const ApiFailure('Identidade de sessão inválida. Entre novamente.', status: 401);
+      throw const ApiFailure(
+        'Identidade de sessão inválida. Entre novamente.',
+        status: 401,
+      );
     }
   }
 
   Future<void> login(String email, String password) async {
     await clear();
-    final data = await request('POST', 'api/user/auth/token/',
-        body: {'email': email, 'password': password}, authenticated: false);
+    final data = await request(
+      'POST',
+      'api/user/auth/token/',
+      body: {'email': email, 'password': password},
+      authenticated: false,
+    );
     await _saveTokens(data as Map<String, dynamic>);
   }
 
   Future<void> _saveTokens(Map<String, dynamic> data) async {
     final access = data['access'] as String;
     final refresh = data['refresh'] as String? ?? _refresh;
-    if (refresh == null) throw const ApiFailure('Sessão inválida.', status: 401);
+    if (refresh == null) {
+      throw const ApiFailure('Sessão inválida.', status: 401);
+    }
     // Persist rotated pair together before any dependent request.
-    await store.write(_tokenKey, jsonEncode({'access': access, 'refresh': refresh}));
+    await store.write(
+      _tokenKey,
+      jsonEncode({'access': access, 'refresh': refresh}),
+    );
     _access = access;
     _refresh = refresh;
   }
@@ -110,23 +151,40 @@ class ApiClient {
     final generation = _sessionGeneration;
     final refresh = _refresh;
     try {
-      final response = await sender('POST', baseUrl.resolve('api/user/auth/token/refresh/'),
-          {'Content-Type': 'application/json', 'Accept': 'application/json'}, {'refresh': refresh});
-      if (generation != _sessionGeneration) throw const ApiFailure('A sessão mudou. Entre novamente.', status: 401);
+      final response = await sender(
+        'POST',
+        baseUrl.resolve('api/user/auth/token/refresh/'),
+        {'Content-Type': 'application/json', 'Accept': 'application/json'},
+        {'refresh': refresh},
+      );
+      if (generation != _sessionGeneration) {
+        throw const ApiFailure('A sessão mudou. Entre novamente.', status: 401);
+      }
       if (response.status != 200) {
         await clear();
-        throw const ApiFailure('Sua sessão expirou. Entre novamente.', status: 401);
+        throw const ApiFailure(
+          'Sua sessão expirou. Entre novamente.',
+          status: 401,
+        );
       }
       await _saveTokens(response.data as Map<String, dynamic>);
-    } finally { _refreshing = null; }
+    } finally {
+      _refreshing = null;
+    }
   }
 
-  Future<Object?> request(String method, String path, {Object? body, bool authenticated = true}) async {
+  Future<Object?> request(
+    String method,
+    String path, {
+    Object? body,
+    bool authenticated = true,
+  }) async {
     final scope = tenantId;
     final generation = _sessionGeneration;
     final sentAccess = _access;
     Future<ApiResponse> send() => sender(method, baseUrl.resolve(path), {
-      'Content-Type': 'application/json', 'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
       if (authenticated && _access != null) 'Authorization': 'Bearer $_access',
       if (authenticated && scope != null) 'X-Tenant-ID': scope,
     }, body);
@@ -137,11 +195,20 @@ class ApiClient {
     if (authenticated && response.status == 401 && _refresh != null) {
       // A concurrent request may already have rotated this same access token.
       if (_access == sentAccess) await (_refreshing ??= _rotate());
-      if (tenantId != scope) throw const ApiFailure('A academia ativa mudou. Recarregue.', status: 409);
+      if (tenantId != scope) {
+        throw const ApiFailure(
+          'A academia ativa mudou. Recarregue.',
+          status: 409,
+        );
+      }
       response = await send();
     }
-    if (authenticated && (generation != _sessionGeneration || tenantId != scope)) {
-      throw const ApiFailure('A sessão ou academia ativa mudou. Recarregue.', status: 409);
+    if (authenticated &&
+        (generation != _sessionGeneration || tenantId != scope)) {
+      throw const ApiFailure(
+        'A sessão ou academia ativa mudou. Recarregue.',
+        status: 409,
+      );
     }
     if (response.status < 200 || response.status >= 300) {
       final message = switch (response.status) {
@@ -149,7 +216,8 @@ class ApiClient {
         401 => 'Sua sessão expirou. Entre novamente.',
         403 => 'Seu vínculo não permite este acesso na academia selecionada.',
         404 => 'Este conteúdo não está disponível.',
-        409 => 'Há um conflito. Seu registro local foi preservado para revisão.',
+        409 =>
+          'Há um conflito. Seu registro local foi preservado para revisão.',
         429 => 'Muitas tentativas. Aguarde um pouco e tente novamente.',
         _ => 'A API está indisponível. Tente novamente.',
       };
@@ -168,7 +236,9 @@ class ApiClient {
         break;
       }
       final page = result! as Map<String, dynamic>;
-      items.addAll((page['results'] as List<dynamic>).cast<Map<String, dynamic>>());
+      items.addAll(
+        (page['results'] as List<dynamic>).cast<Map<String, dynamic>>(),
+      );
       final link = page['next'] as String?;
       if (link == null) break;
       final uri = baseUrl.resolve(link);
@@ -182,14 +252,24 @@ class ApiClient {
 
   Future<void> logout() async {
     try {
-      if (_refresh != null) await request('POST', 'api/user/auth/token/revoke/',
-          body: {'refresh': _refresh}, authenticated: false);
-    } finally { await clear(); }
+      if (_refresh != null) {
+        await request(
+          'POST',
+          'api/user/auth/token/revoke/',
+          body: {'refresh': _refresh},
+          authenticated: false,
+        );
+      }
+    } finally {
+      await clear();
+    }
   }
 
   Future<void> clear() async {
     _sessionGeneration++;
-    _access = null; _refresh = null; tenantId = null;
+    _access = null;
+    _refresh = null;
+    tenantId = null;
     await store.delete(_tokenKey);
   }
 }

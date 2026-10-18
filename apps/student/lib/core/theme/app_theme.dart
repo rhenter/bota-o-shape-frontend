@@ -36,7 +36,9 @@ abstract final class AppTheme {
           backgroundColor: lime,
           foregroundColor: navy,
           minimumSize: const Size(44, 48),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(

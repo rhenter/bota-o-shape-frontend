@@ -148,7 +148,8 @@ class DemoRepository implements StudentRepository {
           id: '00000000-0000-4000-8000-000000000702',
           name: 'Agachamento com halter · demonstração',
           instructions: ['Conteúdo em rascunho. Aguarda revisão profissional.'],
-          coachObservation: 'Exemplo de observação do professor; validar antes do uso real.',
+          coachObservation:
+              'Exemplo de observação do professor; validar antes do uso real.',
           sets: [
             DemoSetPrescription(
               id: '00000000-0000-4000-8000-000000000703',
