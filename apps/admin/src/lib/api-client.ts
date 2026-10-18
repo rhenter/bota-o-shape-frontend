@@ -103,7 +103,8 @@ export class ApiError extends Error {
 
 export class ApiClient {
   private tokens: Tokens | null = null;
-  private refreshing: Promise<void> | null = null;
+  private sessionGeneration = 0;
+  private refreshing: { generation: number; promise: Promise<void> } | null = null;
   private sessionListeners = new Set<(authenticated: boolean) => void>();
   constructor(
     private baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ??
@@ -138,16 +139,24 @@ export class ApiClient {
     }
   }
   clearSession() {
+    this.sessionGeneration++;
+    this.refreshing = null;
     this.setSession(null);
+  }
+  private requireGeneration(generation: number) {
+    if (generation !== this.sessionGeneration)
+      throw new ApiError(401, "Sua sessão mudou. Entre para acessar novamente.");
   }
   async login(email: string, password: string) {
     this.clearSession();
+    const generation = this.sessionGeneration;
     const tokens = await this.request<Tokens>(
       "/api/user/auth/token/",
       { method: "POST", body: JSON.stringify({ email, password }) },
       undefined,
       false,
     );
+    this.requireGeneration(generation);
     this.setSession(tokens);
   }
   async logout() {
@@ -161,7 +170,8 @@ export class ApiClient {
         false,
       );
   }
-  private async rotate() {
+  private async rotate(generation: number) {
+    this.requireGeneration(generation);
     const refresh = this.tokens?.refresh;
     if (!refresh)
       throw new ApiError(401, "Sua sessão terminou. Entre novamente.");
@@ -172,10 +182,10 @@ export class ApiClient {
         undefined,
         false,
       );
-      // Do not restore a session that was explicitly closed while refresh was pending.
-      if (this.tokens?.refresh === refresh) this.setSession(tokens);
+      this.requireGeneration(generation);
+      this.setSession(tokens);
     } catch (error) {
-      this.clearSession();
+      if (generation === this.sessionGeneration) this.clearSession();
       throw error;
     }
   }
@@ -185,7 +195,9 @@ export class ApiClient {
     tenantId?: string,
     authenticated = true,
     retry = true,
+    generation = this.sessionGeneration,
   ): Promise<T> {
+    if (authenticated) this.requireGeneration(generation);
     const headers = new Headers(options.headers);
     if (options.body && !(options.body instanceof FormData))
       headers.set("Content-Type", "application/json");
@@ -212,12 +224,20 @@ export class ApiClient {
         "Não foi possível conectar à API. Verifique o serviço e tente novamente.",
       );
     }
+    if (authenticated) this.requireGeneration(generation);
     if (response.status === 401 && authenticated && retry) {
-      this.refreshing ??= this.rotate().finally(() => {
-        this.refreshing = null;
-      });
-      await this.refreshing;
-      return this.request<T>(path, options, tenantId, authenticated, false);
+      if (this.refreshing?.generation !== generation) {
+        const refreshing = {
+          generation,
+          promise: this.rotate(generation).finally(() => {
+            if (this.refreshing === refreshing) this.refreshing = null;
+          }),
+        };
+        this.refreshing = refreshing;
+      }
+      await this.refreshing.promise;
+      this.requireGeneration(generation);
+      return this.request<T>(path, options, tenantId, authenticated, false, generation);
     }
     if (!response.ok) {
       if (response.status === 401 && authenticated) this.clearSession();
@@ -234,15 +254,19 @@ export class ApiClient {
           "O serviço não concluiu a solicitação. Tente novamente.",
       );
     }
-    return response.status === 204
+    const result = response.status === 204
       ? (undefined as T)
       : ((await response.json()) as T);
+    if (authenticated) this.requireGeneration(generation);
+    return result;
   }
   async list<T>(path: string, tenantId?: string): Promise<T[]> {
+    const generation = this.sessionGeneration;
     const items: T[] = [];
     let next: string | null = path;
     const visited = new Set<string>();
     while (next) {
+      this.requireGeneration(generation);
       if (visited.has(next))
         throw new ApiError(
           0,

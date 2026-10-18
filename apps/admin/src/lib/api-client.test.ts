@@ -127,4 +127,78 @@ describe("contrato HTTP da API Django", () => {
     await expect(request).rejects.toThrow(/Entre para acessar/);
     expect(client.authenticated).toBe(false);
   });
+  it("never retries A's delayed PATCH after login changes to B", async () => {
+    let resolvePatch!: (response: Response) => void;
+    const fetcher = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(json({ access: "access-a", refresh: "refresh-a" }))
+      .mockImplementationOnce(() => new Promise((resolve) => { resolvePatch = resolve; }))
+      .mockResolvedValueOnce(json({ access: "access-b", refresh: "refresh-b" }))
+      .mockResolvedValueOnce(json([]));
+    const client = new ApiClient("http://api.test", fetcher);
+    await client.login("a@example.test", "senha");
+    const patch = client.request("/api/user/users/a/", { method: "PATCH", body: "{}" }, "tenant-a");
+    const rejected = expect(patch).rejects.toThrow(/sessão mudou/);
+    await client.login("b@example.test", "senha");
+    resolvePatch(json({}, 401));
+    await rejected;
+    await client.getTenants();
+    expect(fetcher).toHaveBeenCalledTimes(4);
+    expect(new Headers(fetcher.mock.calls[3][1]?.headers).get("Authorization")).toBe("Bearer access-b");
+    expect(client.authenticated).toBe(true);
+  });
+
+  it("an old failed refresh cannot clear B or reset B's shared refresh", async () => {
+    let resolveOld!: (response: Response) => void;
+    let resolveNew!: (response: Response) => void;
+    const fetcher = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(json({ access: "access-a", refresh: "refresh-a" }))
+      .mockResolvedValueOnce(json({}, 401))
+      .mockImplementationOnce(() => new Promise((resolve) => { resolveOld = resolve; }))
+      .mockResolvedValueOnce(json({ access: "access-b", refresh: "refresh-b" }))
+      .mockResolvedValueOnce(json({}, 401))
+      .mockImplementationOnce(() => new Promise((resolve) => { resolveNew = resolve; }))
+      .mockResolvedValueOnce(json({}, 401))
+      .mockImplementation(async () => json([]));
+    const client = new ApiClient("http://api.test", fetcher);
+    await client.login("a@example.test", "senha");
+    const old = client.getTenants();
+    const oldRejected = expect(old).rejects.toBeInstanceOf(ApiError);
+    await vi.waitFor(() => expect(fetcher).toHaveBeenCalledTimes(3));
+    await client.login("b@example.test", "senha");
+    const first = client.getTenants();
+    await vi.waitFor(() => expect(fetcher).toHaveBeenCalledTimes(6));
+    resolveOld(json({}, 401));
+    await oldRejected;
+    expect(client.authenticated).toBe(true);
+    const second = client.getEquipment("tenant-b");
+    await vi.waitFor(() => expect(fetcher).toHaveBeenCalledTimes(7));
+    resolveNew(json({ access: "new-b", refresh: "new-refresh-b" }));
+    await Promise.all([first, second]);
+    expect(fetcher.mock.calls.filter(([url]) => String(url).endsWith("/token/refresh/"))).toHaveLength(2);
+    for (const call of fetcher.mock.calls.slice(7)) {
+      expect(new Headers(call[1]?.headers).get("Authorization")).toBe("Bearer new-b");
+    }
+  });
+
+  it("shares a single refresh for concurrent requests in the same session", async () => {
+    let resolveRefresh!: (response: Response) => void;
+    const fetcher = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(json({ access, refresh: "r1" }))
+      .mockResolvedValueOnce(json({}, 401))
+      .mockResolvedValueOnce(json({}, 401))
+      .mockImplementationOnce(() => new Promise((resolve) => { resolveRefresh = resolve; }))
+      .mockImplementation(async () => json([]));
+    const client = new ApiClient("http://api.test", fetcher);
+    await client.login("a@example.test", "senha");
+    const first = client.getTenants();
+    const second = client.getEquipment("tenant-1");
+    await vi.waitFor(() => expect(fetcher).toHaveBeenCalledTimes(4));
+    resolveRefresh(json({ access: "new-access", refresh: "r2" }));
+    await Promise.all([first, second]);
+    expect(fetcher).toHaveBeenCalledTimes(6);
+    for (const call of fetcher.mock.calls.slice(4)) {
+      expect(new Headers(call[1]?.headers).get("Authorization")).toBe("Bearer new-access");
+    }
+  });
+
 });

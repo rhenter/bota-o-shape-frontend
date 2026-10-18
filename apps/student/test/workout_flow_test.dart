@@ -1,3 +1,4 @@
+import 'package:bota_o_shape_student/core/api/api_client.dart';
 import 'package:bota_o_shape_student/core/data/student_gateway.dart';
 import 'package:bota_o_shape_student/core/storage/private_store.dart';
 import 'package:bota_o_shape_student/features/home/student_shell.dart';
@@ -199,4 +200,152 @@ void main() {
     expect(rpe.controller!.text, isEmpty);
   });
 
+  testWidgets('web-shaped instructions use pt-BR labels and keep backend aliases', (tester) async {
+    await tester.pumpWidget(const MaterialApp(home: Scaffold(body: InstructionsCard(instructions: {
+      'preparation': 'Ajuste o banco.', 'steps': ['Apoie os pés.', 'Execute com controle.'],
+      'commonMistakes': ['Evite perder o apoio.'], 'breathing': 'Respire livremente.',
+    }))));
+    for (final label in ['Preparação', 'Execução', 'Erros comuns', 'Respiração']) {
+      expect(find.text(label), findsOneWidget);
+    }
+    expect(find.text('Apoie os pés.\nExecute com controle.'), findsOneWidget);
+    expect(find.text('commonMistakes'), findsNothing);
+    await tester.pumpWidget(const MaterialApp(home: Scaffold(body: InstructionsCard(instructions: {
+      'setup': 'Ajuste.', 'execution': 'Execute.', 'common_mistakes': 'Evite.',
+    }))));
+    for (final label in ['Preparação', 'Execução', 'Erros comuns']) {
+      expect(find.text(label), findsOneWidget);
+    }
+  });
+
+  test('SetLog precision and numeric boundaries match the actual API fields', () {
+    for (final entry in {'load_kg': '99999.99', 'distance_meters': '9999999.99',
+      'rpe': '10.0', 'repetitions': '2147483647', 'duration_seconds': '2147483647'}.entries) {
+      expect(validateSetValue(entry.key, entry.value), isNull, reason: entry.key);
+      expect(validateSetValue(entry.key, '0'), isNull);
+      expect(validateSetValue(entry.key, null), isNull);
+      expect(validateSetValue(entry.key, '-1'), isNotNull);
+      expect(validateSetValue(entry.key, 'NaN'), isNotNull);
+      expect(validateSetValue(entry.key, 'Infinity'), isNotNull);
+    }
+    for (final entry in {'load_kg': ['100000', '12.345', '1e3'],
+      'distance_meters': ['10000000', '123.456'], 'rpe': ['10.1', '7.55'],
+      'repetitions': ['1.5', '2147483648'], 'duration_seconds': ['0.1', '2147483648']}.entries) {
+      for (final value in entry.value) {
+        expect(validateSetValue(entry.key, value), isNotNull, reason: '${entry.key}=$value');
+      }
+    }
+    expect(validateSetValue('load_kg', '12,50'), isNull);
+    expect(parseSetValue('load_kg', '12,50'), 12.5);
+  });
+
+  test('invalid persisted sets cannot finalize until corrected', () async {
+    final plan = (await DemoStudentGateway().workouts()).first;
+    final flow = WorkoutController(plan: plan);
+    final target = plan.exercises.first.sets.first;
+    flow.record(0, target, {'load_kg': 12.345});
+    expect(flow.finish, throwsA(isA<ApiFailure>()));
+    expect(flow.finished, isFalse);
+    flow.record(0, target, {'load_kg': 12.34});
+    expect(flow.finish().key, flow.sessionKey);
+  });
+
+  test('rejected first entry is parked and later valid sessions sync across restart', () async {
+    final gateway = RejectingWorkoutGateway();
+    final store = MemoryPrivateStore();
+    final plan = (await gateway.workouts()).first;
+    final rejected = WorkoutController(plan: plan).finish();
+    final valid = WorkoutController(plan: plan).finish();
+    gateway.rejectedKeys.add(rejected.key);
+    final queue = WorkoutSyncQueue(gateway: gateway, store: store);
+    await queue.enqueue(rejected);
+    await queue.enqueue(valid);
+    await queue.sync();
+    expect(queue.pending.single.status, SyncStatus.rejected);
+    expect((await gateway.history()).single['idempotency_key'], valid.key);
+    final restored = WorkoutSyncQueue(gateway: gateway, store: store);
+    await restored.restore();
+    await restored.sync();
+    expect(gateway.submittedKeys, [rejected.key, valid.key]);
+    expect(restored.pending.single.payload, rejected.payload);
+  });
+
+  test('correction persists the same identity, validates fields and requeues explicitly', () async {
+    final gateway = RejectingWorkoutGateway();
+    final store = MemoryPrivateStore();
+    final plan = (await gateway.workouts()).first;
+    final flow = WorkoutController(plan: plan);
+    flow.record(0, plan.exercises.first.sets.first, {'load_kg': 12.5});
+    final item = flow.finish();
+    gateway.rejectedKeys.add(item.key);
+    final queue = WorkoutSyncQueue(gateway: gateway, store: store);
+    await queue.enqueue(item);
+    await queue.sync();
+    await expectLater(queue.requeueRejected(item.key, corrections: {'0.0.load_kg': '12.345'}), throwsA(isA<ApiFailure>()));
+    await expectLater(queue.requeueRejected(item.key, corrections: {'idempotency_key': 'other'}), throwsA(isA<ApiFailure>()));
+    expect(queue.pending.single.status, SyncStatus.rejected);
+    await queue.requeueRejected(item.key, corrections: {'0.0.load_kg': '15,25'});
+    expect(gateway.submittedKeys, [item.key]); // Saving never sends automatically.
+    final restored = WorkoutSyncQueue(gateway: gateway, store: store);
+    await restored.restore();
+    expect(restored.pending.single.key, item.key);
+    expect(restored.pending.single.status, SyncStatus.pending);
+    expect(restored.pending.single.payload['started_at'], item.payload['started_at']);
+    expect(restored.pending.single.payload['completed_at'], item.payload['completed_at']);
+    gateway.rejectedKeys.clear();
+    await restored.sync();
+    expect(restored.pending, isEmpty);
+    final log = ((await gateway.history()).single['exercise_logs'] as List<dynamic>).single as Map<String, dynamic>;
+    expect(((log['set_logs'] as List<dynamic>).single as Map<String, dynamic>)['load_kg'], 15.25);
+  });
+
+  test('explicit requeue after a resolved refusal preserves the original payload', () async {
+    final gateway = RejectingWorkoutGateway();
+    final item = WorkoutController(plan: (await gateway.workouts()).first).finish();
+    final queue = WorkoutSyncQueue(gateway: gateway, store: MemoryPrivateStore());
+    gateway.rejectedKeys.add(item.key);
+    await queue.enqueue(item);
+    await queue.sync();
+    await queue.requeueRejected(item.key);
+    expect(queue.pending.single.status, SyncStatus.pending);
+    expect(queue.pending.single.payload, item.payload);
+    expect(gateway.submittedKeys, [item.key]);
+    gateway.rejectedKeys.clear();
+    await queue.sync();
+    expect(queue.pending, isEmpty);
+  });
+
+  test('rejected removal persists while uncertain and conflicting records cannot be edited or removed', () async {
+    final gateway = RejectingWorkoutGateway();
+    final store = MemoryPrivateStore();
+    final item = WorkoutController(plan: (await gateway.workouts()).first).finish();
+    final queue = WorkoutSyncQueue(gateway: gateway, store: store);
+    gateway.rejectedKeys.add(item.key);
+    await queue.enqueue(item);
+    await queue.sync();
+    await queue.removeRejected(item.key);
+    final restored = WorkoutSyncQueue(gateway: gateway, store: store);
+    await restored.restore();
+    expect(restored.pending, isEmpty);
+    for (final status in [SyncStatus.pending, SyncStatus.conflict]) {
+      final protected = PendingWorkout(payload: {...item.payload, 'idempotency_key': status.name}, status: status);
+      await queue.enqueue(protected);
+      await expectLater(queue.requeueRejected(protected.key), throwsA(isA<ApiFailure>()));
+      await expectLater(queue.removeRejected(protected.key), throwsA(isA<ApiFailure>()));
+    }
+    expect(queue.pending.length, 2);
+  });
+
+}
+
+
+class RejectingWorkoutGateway extends DemoStudentGateway {
+  final Set<String> rejectedKeys = {};
+  final List<String> submittedKeys = [];
+  @override
+  Future<Map<String, dynamic>> submit(PendingWorkout item) async {
+    submittedKeys.add(item.key);
+    if (rejectedKeys.contains(item.key)) throw const ApiFailure('Confira os valores da série.', status: 400);
+    return super.submit(item);
+  }
 }

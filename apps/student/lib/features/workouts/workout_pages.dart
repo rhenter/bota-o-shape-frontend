@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
+import '../../core/api/api_client.dart';
 import '../../core/widgets/student_widgets.dart';
 import 'rest_timer.dart';
 import 'workout_controller.dart';
@@ -145,7 +146,8 @@ class InstructionsCard extends StatelessWidget {
       const SizedBox(height: 8),
     ],
   ]));
-  String _label(String key) => const {'setup': 'Preparação', 'execution': 'Execução',
+  String _label(String key) => const {'preparation': 'Preparação', 'steps': 'Execução',
+    'commonMistakes': 'Erros comuns', 'setup': 'Preparação', 'execution': 'Execução',
     'breathing': 'Respiração', 'common_mistakes': 'Erros comuns', 'tips': 'Dicas'}[key] ?? key;
 }
 
@@ -252,21 +254,13 @@ class _SetEntryCardState extends State<SetEntryCard> {
     if (['distance', 'substitution'].contains(widget.trackingType)) 'distance_meters': 'Distância (m)',
     'rpe': 'RPE realizado 0–10 (opcional)',
   };
-  String? _validate(String field, String? value) {
-    if (value == null || value.trim().isEmpty) return null;
-    final parsed = double.tryParse(value.replaceAll(',', '.'));
-    if (parsed == null || !parsed.isFinite || parsed < 0) return 'Use um número positivo ou zero.';
-    if (['repetitions', 'duration_seconds'].contains(field) && parsed != parsed.roundToDouble()) return 'Use um número inteiro.';
-    if (field == 'rpe' && parsed > 10) return 'RPE deve estar entre 0 e 10.';
-    return null;
-  }
   void _record() {
     if (!_form.currentState!.validate()) return;
     final values = <String, dynamic>{};
     for (final key in _labels.keys) {
       final raw = _fields[key]!.text.trim().replaceAll(',', '.');
       if (raw.isEmpty) continue;
-      values[key] = ['repetitions', 'duration_seconds'].contains(key) ? double.parse(raw).toInt() : double.parse(raw);
+      values[key] = parseSetValue(key, raw);
     }
     if (values.keys.every((key) => key == 'rpe')) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Registre ao menos um valor realizado.')));
@@ -287,7 +281,7 @@ class _SetEntryCardState extends State<SetEntryCard> {
       const SizedBox(height: 12),
       for (final entry in _labels.entries) Padding(padding: const EdgeInsets.only(bottom: 12), child: TextFormField(
         controller: _fields[entry.key], keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        decoration: InputDecoration(labelText: entry.value), validator: (v) => _validate(entry.key, v))),
+        decoration: InputDecoration(labelText: entry.value), validator: (v) => validateSetValue(entry.key, v))),
       FilledButton.icon(onPressed: _record, icon: Icon(_registered ? Icons.check_circle : Icons.check),
         label: Text(_registered ? 'Atualizar série ${widget.target.order}' : 'Concluir série ${widget.target.order}')),
     ],
@@ -327,8 +321,8 @@ class _WorkoutSummaryPageState extends State<WorkoutSummaryPage> {
         if (mounted) setState(() { _error = 'Sessão salva. A limpeza do rascunho ficou pendente neste aparelho.'; });
       }
       await widget.queue.sync();
-    } catch (_) {
-      if (mounted) setState(() { _error = 'Não foi possível salvar neste aparelho. Mantenha esta tela aberta e tente novamente.'; });
+    } catch (error) {
+      if (mounted) setState(() { _error = error is ApiFailure ? error.message : 'Não foi possível salvar neste aparelho. Mantenha esta tela aberta e tente novamente.'; });
     } finally { if (mounted) setState(() { _saving = false; }); }
   }
   @override
@@ -356,11 +350,82 @@ class _WorkoutSummaryPageState extends State<WorkoutSummaryPage> {
         AnimatedBuilder(animation: widget.queue, builder: (context, _) {
           final local = widget.queue.pending.where((p) => p.key == widget.flow.sessionKey);
           return StatusMessage(local.isEmpty ? 'Sincronizado com a academia.' :
-            '${local.first.status == SyncStatus.conflict ? 'Conflito para revisão' : 'Pendente de sincronização'} · '
+            '${local.first.status == SyncStatus.conflict ? 'Conflito para revisão' : local.first.status == SyncStatus.rejected ? 'Envio não aceito · revise em Treinos' : 'Pendente de sincronização'} · '
             'Registro salvo neste aparelho. ${local.first.error ?? 'Você pode tentar novamente em Treinos.'}');
         }),
         FilledButton(onPressed: _saving ? null : () => Navigator.pop(context, true), child: const Text('Voltar para início')),
       ],
+    ]));
+}
+
+class RejectedWorkoutPage extends StatefulWidget {
+  const RejectedWorkoutPage({super.key, required this.item, required this.queue});
+  final PendingWorkout item;
+  final WorkoutSyncQueue queue;
+  @override
+  State<RejectedWorkoutPage> createState() => _RejectedWorkoutPageState();
+}
+
+class _RejectedWorkoutPageState extends State<RejectedWorkoutPage> {
+  final _form = GlobalKey<FormState>();
+  final Map<String, TextEditingController> _fields = {};
+  bool _saving = false;
+  String? _error;
+  @override
+  void initState() {
+    super.initState();
+    final logs = widget.item.payload['exercise_logs'] as List<dynamic>? ?? [];
+    for (var i = 0; i < logs.length; i++) {
+      final sets = (logs[i] as Map<String, dynamic>)['set_logs'] as List<dynamic>? ?? [];
+      for (var j = 0; j < sets.length; j++) {
+        final set = sets[j] as Map<String, dynamic>;
+        for (final field in setLogFields.keys) {
+          _fields['$i.$j.$field'] = TextEditingController(text: set[field]?.toString() ?? '');
+        }
+      }
+    }
+  }
+  @override
+  void dispose() { for (final field in _fields.values) { field.dispose(); } super.dispose(); }
+  Future<void> _requeue() async {
+    if (!_form.currentState!.validate()) return;
+    await _change(() => widget.queue.requeueRejected(widget.item.key,
+      corrections: {for (final entry in _fields.entries) entry.key: entry.value.text}));
+  }
+  Future<void> _remove() async {
+    final confirmed = await showDialog<bool>(context: context, builder: (context) => AlertDialog(
+      title: const Text('Remover registro recusado?'),
+      content: const Text('Esta cópia local será removida. Confira os valores antes de continuar. O histórico da academia não será alterado.'),
+      actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Voltar')),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Remover cópia local'))]));
+    if (confirmed == true && mounted) await _change(() => widget.queue.removeRejected(widget.item.key));
+  }
+  Future<void> _change(Future<void> Function() action) async {
+    setState(() { _saving = true; _error = null; });
+    try {
+      await action();
+      if (mounted) Navigator.pop(context);
+    } catch (error) {
+      if (mounted) setState(() { _error = error is ApiFailure ? error.message : 'Não foi possível salvar a alteração neste aparelho.'; });
+    } finally { if (mounted) setState(() { _saving = false; }); }
+  }
+  @override
+  Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('Revisar envio recusado')),
+    body: PageBody(children: [
+      StatusMessage(widget.item.error ?? 'O envio foi recusado.'),
+      const Text('Este registro está fora das tentativas automáticas. Corrija os valores ou, se a academia já resolveu a recusa, mantenha os valores e coloque na fila novamente. A mesma chave da sessão será preservada.'),
+      TextButton(onPressed: () => Navigator.push<void>(context, MaterialPageRoute(
+        builder: (_) => SessionHistoryPage(sessions: [widget.item.payload]))), child: const Text('Ver registro original completo')),
+      Form(key: _form, child: Column(children: [
+        for (final entry in _fields.entries) Padding(padding: const EdgeInsets.only(bottom: 12), child: TextFormField(
+          controller: entry.value, enabled: !_saving,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: InputDecoration(labelText: 'Exercício ${int.parse(entry.key.split('.')[0]) + 1} · série ${int.parse(entry.key.split('.')[1]) + 1} · ${setLogFields[entry.key.split('.').last]}'),
+          validator: (value) => validateSetValue(entry.key.split('.').last, value))),
+      ])),
+      if (_error != null) StatusMessage(_error!),
+      FilledButton(onPressed: _saving ? null : _requeue, child: const Text('Salvar e colocar na fila')),
+      OutlinedButton(onPressed: _saving ? null : _remove, child: const Text('Remover registro recusado')),
     ]));
 }
 

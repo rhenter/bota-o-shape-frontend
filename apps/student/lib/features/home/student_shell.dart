@@ -209,9 +209,12 @@ class _StudentShellState extends State<StudentShell> {
         title: Text('${item.status == SyncStatus.conflict ? 'Conflito para revisão' : item.status == SyncStatus.rejected ? 'Envio não aceito' : 'Pendente de sincronização'} · ${localDate(item.payload['started_at'] as String)}'),
         subtitle: Text(item.error ?? 'Aguardando envio. A mesma chave será usada em cada tentativa.'),
         trailing: IconButton(tooltip: 'Revisar registro local', icon: const Icon(Icons.visibility_outlined),
-          onPressed: () => Navigator.push<void>(context, MaterialPageRoute(builder: (_) => SessionHistoryPage(sessions: [item.payload]))))),
+          onPressed: _queue.syncing ? null : () => Navigator.push<void>(context, MaterialPageRoute(builder: (_) =>
+            item.status == SyncStatus.rejected ? RejectedWorkoutPage(item: item, queue: _queue) : SessionHistoryPage(sessions: [item.payload]))))),
       if (_queue.error != null) Text(_queue.error!),
-      if (_queue.pending.isNotEmpty) FilledButton(onPressed: _queue.syncing ? null : () async {
+      if (_queue.pending.any((item) => item.status == SyncStatus.rejected))
+        const Text('Envios recusados não são reenviados automaticamente. Abra o registro para corrigir, colocar na fila novamente ou remover a cópia local.'),
+      if (_queue.pending.any((item) => item.status == SyncStatus.pending)) FilledButton(onPressed: _queue.syncing ? null : () async {
         await _queue.sync();
         if (mounted) await _load();
       }, child: Text(_queue.syncing ? 'Sincronizando…' : 'Tentar sincronizar')),

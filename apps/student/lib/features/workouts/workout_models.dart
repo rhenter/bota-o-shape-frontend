@@ -3,6 +3,54 @@ import 'dart:math';
 
 double? number(Object? value) => value == null ? null : double.tryParse('$value');
 
+// SetLog decimal fields follow the checked Django/OpenAPI contract.
+const setLogFields = <String, String>{
+  'load_kg': 'Carga (kg)', 'repetitions': 'Repetições',
+  'duration_seconds': 'Duração (s)', 'distance_meters': 'Distância (m)',
+  'rpe': 'RPE realizado 0–10 (opcional)',
+};
+
+String? validateSetValue(String field, Object? value) {
+  if (value == null || '$value'.trim().isEmpty) return null;
+  final raw = '$value'.trim().replaceAll(',', '.');
+  final parsed = double.tryParse(raw);
+  if (parsed == null || !parsed.isFinite || parsed < 0) return 'Use um número positivo ou zero.';
+  if (field == 'repetitions' || field == 'duration_seconds') {
+    if (parsed != parsed.roundToDouble()) return 'Use um número inteiro.';
+    if (parsed > 2147483647) return 'O máximo permitido é 2147483647.';
+    return null;
+  }
+  final places = field == 'rpe' ? 1 : 2;
+  final wholeDigits = field == 'load_kg' ? 5 : field == 'distance_meters' ? 7 : 2;
+  if (!RegExp(r'^\d+(?:\.\d+)?$').hasMatch(raw)) return 'Use um número decimal sem expoente.';
+  final parts = raw.split('.');
+  final whole = parts.first.replaceFirst(RegExp(r'^0+'), '');
+  if (whole.length > wholeDigits) return 'Use no máximo $wholeDigits dígitos antes da vírgula.';
+  if (parts.length > 1 && parts.last.length > places) return 'Use no máximo $places casas decimais.';
+  if (field == 'rpe' && parsed > 10) return 'RPE deve estar entre 0 e 10.';
+  return null;
+}
+
+num? parseSetValue(String field, String raw) {
+  if (raw.trim().isEmpty) return null;
+  final parsed = double.parse(raw.trim().replaceAll(',', '.'));
+  return field == 'repetitions' || field == 'duration_seconds' ? parsed.toInt() : parsed;
+}
+
+String? validateSessionSets(Map<String, dynamic> payload) {
+  for (final rawLog in payload['exercise_logs'] as List<dynamic>? ?? []) {
+    final log = rawLog as Map<String, dynamic>;
+    for (final rawSet in log['set_logs'] as List<dynamic>? ?? []) {
+      final set = rawSet as Map<String, dynamic>;
+      for (final field in setLogFields.keys) {
+        final error = validateSetValue(field, set[field]);
+        if (error != null) return '${setLogFields[field]}: $error';
+      }
+    }
+  }
+  return null;
+}
+
 class SetTarget {
   const SetTarget({required this.id, required this.order, this.minReps, this.maxReps,
     this.loadKg, this.durationSeconds, this.distanceMeters, this.restSeconds = 0, this.note = '',

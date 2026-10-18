@@ -106,13 +106,19 @@ class WorkoutController extends ChangeNotifier {
     return null;
   }
 
-  PendingWorkout finish() => _finished ??= PendingWorkout(payload: {
-    'assignment': plan.assignmentId, 'idempotency_key': sessionKey,
-    'started_at': startedAt.toIso8601String(), 'completed_at': DateTime.now().toUtc().toIso8601String(),
-    'student_note': note,
-    'exercise_logs': logs.where((l) => l.skipped || l.sets.isNotEmpty || l.personalNote.isNotEmpty || l.substituted)
-        .map((l) => l.toJson()).toList(),
-  });
+  PendingWorkout finish() {
+    if (_finished != null) return _finished!;
+    final payload = <String, dynamic>{
+      'assignment': plan.assignmentId, 'idempotency_key': sessionKey,
+      'started_at': startedAt.toIso8601String(), 'completed_at': DateTime.now().toUtc().toIso8601String(),
+      'student_note': note,
+      'exercise_logs': logs.where((l) => l.skipped || l.sets.isNotEmpty || l.personalNote.isNotEmpty || l.substituted)
+          .map((l) => l.toJson()).toList(),
+    };
+    final error = validateSessionSets(payload);
+    if (error != null) throw ApiFailure(error, status: 400);
+    return _finished = PendingWorkout(payload: payload);
+  }
 }
 
 /// Compare only submitted fields. IDs/timestamps added by the API are ignored;
@@ -186,12 +192,56 @@ class WorkoutSyncQueue extends ChangeNotifier {
     _notify();
   }
 
+  PendingWorkout _rejected(String key) {
+    if (syncing) throw const ApiFailure('Aguarde o envio em andamento.');
+    return _pending.firstWhere((item) => item.key == key && item.status == SyncStatus.rejected,
+      orElse: () => throw const ApiFailure('Somente envios recusados podem ser alterados. Conflitos exigem revisão com a academia.', status: 409));
+  }
+
+  /// A definite rejection did not create a session. Retain its identity on correction;
+  /// uncertain deliveries and conflicts can never enter this path.
+  Future<void> requeueRejected(String key, {Map<String, String> corrections = const {}}) async {
+    final original = _rejected(key);
+    final payload = jsonDecode(jsonEncode(original.payload)) as Map<String, dynamic>;
+    final remaining = {...corrections};
+    final logs = payload['exercise_logs'] as List<dynamic>? ?? [];
+    for (var i = 0; i < logs.length; i++) {
+      final sets = (logs[i] as Map<String, dynamic>)['set_logs'] as List<dynamic>? ?? [];
+      for (var j = 0; j < sets.length; j++) {
+        final set = sets[j] as Map<String, dynamic>;
+        for (final field in setLogFields.keys) {
+          final path = '$i.$j.$field';
+          if (!remaining.containsKey(path)) continue;
+          final raw = remaining.remove(path)!;
+          final error = validateSetValue(field, raw);
+          if (error != null) throw ApiFailure('${setLogFields[field]}: $error', status: 400);
+          set[field] = parseSetValue(field, raw);
+        }
+      }
+    }
+    if (remaining.isNotEmpty) throw const ApiFailure('Campo de correção inválido.', status: 400);
+    final validation = validateSessionSets(payload);
+    if (validation != null) throw ApiFailure(validation, status: 400);
+    final index = _pending.indexOf(original);
+    _pending[index] = PendingWorkout(payload: payload);
+    try { await _persist(); } catch (_) { _pending[index] = original; rethrow; }
+    _notify();
+  }
+
+  Future<void> removeRejected(String key) async {
+    final original = _rejected(key);
+    final index = _pending.indexOf(original);
+    _pending.removeAt(index);
+    try { await _persist(); } catch (_) { _pending.insert(index, original); rethrow; }
+    _notify();
+  }
+
   Future<void> sync() async {
     if (syncing) return;
     syncing = true; error = null; _notify();
     try {
       for (final item in [..._pending]) {
-        if (item.status == SyncStatus.conflict) continue;
+        if (item.status != SyncStatus.pending) continue;
         final index = _pending.indexOf(item);
         try {
           final response = await gateway.submit(item);
@@ -204,12 +254,13 @@ class WorkoutSyncQueue extends ChangeNotifier {
           }
         } on ApiFailure catch (failure) {
           final status = failure.status == 409 ? SyncStatus.conflict
-              : failure.status == null || failure.status == 401 || failure.status == 429 || failure.status! >= 500
+              : failure.status == null || failure.status! <= 0 || failure.status == 401 || failure.status == 408 || failure.status == 429 || failure.status! >= 500
                   ? SyncStatus.pending : SyncStatus.rejected;
           _pending[index] = item.withState(status, failure.message);
           error = failure.message;
           await _persist();
-          break;
+          if (status == SyncStatus.pending) break;
+          continue;
         }
         try { await _persist(); } catch (_) {
           if (!_pending.any((p) => p.key == item.key)) _pending.insert(index, item);
