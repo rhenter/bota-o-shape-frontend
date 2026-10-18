@@ -44,9 +44,9 @@
 
 - [ ] Create the monorepo manifests, platform scaffolds, original logo copies, and development documentation.
 - [ ] Write Vitest tests covering proportional nutrition calculation, absent nutrient preservation, combined roles, verified nutrition publishing, tenant membership, and billing permission.
-- [ ] Run `npm install` from the repo root, then run the focused tests and confirm they fail before implementation.
+- [ ] Run `yarn install` from the repo root, then run the focused tests and confirm they fail before implementation.
 - [ ] Implement only the typed demo repository, domain utilities, base Next layout, and Flutter theme/repository needed by later tasks.
-- [ ] Run `npm test`, `npm run lint`, and `npm run build`; if Flutter is installed also run `flutter analyze` and `flutter test` from `apps/student`.
+- [ ] Run `yarn test`, `yarn lint`, and `yarn build`; if Flutter is installed also run `flutter analyze` and `flutter test` from `apps/student`.
 - [ ] Commit with message `feat: scaffold frontend applications`.
 
 ### Task 2: Admin shell, access, dashboard, students, catalog, and equipment
@@ -161,7 +161,7 @@
 - [ ] Verify every route and bottom-navigation destination has content, empty/loading/error demonstrations, visible demo labeling, and no broken local links.
 - [ ] Audit 390 px/desktop admin layouts, small mobile screens, keyboard focus, semantic labels, 44 px targets, contrast, and reduced-motion CSS.
 - [ ] Search for forbidden behavior: student billing, readable passwords, hard deletion wording, nutrition actions for unverified roles, invented pricing, missing nutrients coerced to zero, and direct incompatible assessment comparison.
-- [ ] Run `npm test`, `npm run lint`, and `npm run build`; run `flutter analyze` and `flutter test` if Flutter is installed.
+- [ ] Run `yarn test`, `yarn lint`, and `yarn build`; run `flutter analyze` and `flutter test` if Flutter is installed.
 - [ ] Document missing API/OpenAPI integration and human legal/clinical/content/accessibility/device review as pre-production work.
 - [ ] Document any API endpoints required by approved screens that are absent from the generated OpenAPI; do not describe implemented endpoints as missing.
 - [ ] Commit with message `docs: finalize frontend implementation`.

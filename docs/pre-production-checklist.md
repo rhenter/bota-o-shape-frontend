@@ -1,38 +1,40 @@
-# Checklist de pré-produção
+# Pre-production checklist
 
-A implementação é candidata à integração, não uma liberação para dados reais. Marcar um item somente com evidência do ambiente e responsável pela validação. Não há declaração de conformidade legal/clínica, aprovação em lojas ou certificação integral de acessibilidade.
+[Português](pre-production-checklist.pt.md)
 
-## Bloqueadores de API e contrato
+The implementation is an integration candidate. Check an item only when the target environment and responsible reviewer provide evidence.
 
-- [ ] Backend filtra cada leitura/escrita profissional por tenant e vínculo do aluno, incluindo avaliações, relatórios, atribuições, sessões, consentimentos e objetos aninhados. Testar IDs de outro tenant e vínculo revogado. Só então remover os bloqueios conservadores do painel.
-- [ ] Publish/revise/criação nutricional revalidam CRN/UF, papel, atribuição ativa e consentimento em cada ação, sem bypass de admin/owner. Testar revogação durante edição e versões anteriores preservadas. UI não é controle de segurança suficiente.
-- [ ] Definir leitura clínica autorizada de perfil/anamnese, diário e mensagens: as rotas atuais de posse do aluno não fornecem a carteira profissional.
-- [ ] Completar os contratos aprovados de mídia/variações com revisão, storage privado e autorização; definir edição aninhada de treino/avaliação, avaliador/interpretação/PDF, calendário/recorrência, preferências e consulta/exportação de auditoria. Documentar recursos adiados explicitamente.
-- [ ] Expor autoria/composição histórica do plano ao aluno e snapshots históricos do diário, definir `day` e idempotência nutricional. Não recalcular o passado usando catálogo atualizado. Definir substituição estruturada e resolução segura de conflitos de sessão.
-- [ ] Configurar e testar provedor de cobrança, portal/checkout/faturas, URLs HTTPS, assinatura B2B por tenant, webhooks autenticados e idempotentes, tolerância/cancelamento e preservação de leitura/exportação sem apagar dados. Os endpoints já existem; aluno nunca recebe checkout.
-- [ ] Regenerar OpenAPI no backend e verificar paths, métodos, DTOs e ações customizadas. O cálculo alimentar retorna snapshot em runtime; o schema de ações não deve induzir contrato incorreto. Não confundir endpoint existente com campo/garantia ausente.
+## API and contract blockers
 
-## Integração e execução
+- [ ] Filter every professional read and write by tenant and active student relationship, including assessments, reports, assignments, sessions, consents, and nested objects.
+- [ ] Revalidate the nutritionist role, verified CRN/UF, active assignment, and consent for nutrition create, publish, and revise operations without an administrator bypass.
+- [ ] Define authorized professional access to health profiles, diaries, and messages without reusing student-owned endpoints incorrectly.
+- [ ] Complete approved media and variant contracts with private storage and authorization.
+- [ ] Define nested editing or versioning for workout structures and assessment measurements.
+- [ ] Complete evaluator, report interpretation, PDF, scheduling, recurrence, preferences, and audit contracts.
+- [ ] Expose immutable nutrition authorship and snapshots, define the meaning of plan days, and add safe idempotency semantics.
+- [ ] Configure the billing provider and test authenticated, idempotent webhooks, hosted checkout, invoices, entitlements, cancellation, and read/export access after cancellation.
+- [ ] Regenerate the backend OpenAPI schema and verify every path, method, DTO, and custom action used by the clients.
 
-- [ ] Configurar API HTTPS/CORS, origens e contas de teste por tenant. Nenhum segredo em `NEXT_PUBLIC_*`, Dart defines, cliente ou logs. Validar expiração, refresh rotativo, logout/revogação e tenant alterado durante uma requisição.
-- [ ] Executar jornada real: convite/aceite → login/tenant → criar/revisar/publicar/atribuir treino → execução/offline/restart/sincronização → avaliação/revisão/conclusão/liberação → relatório próprio → nutrição/diário/água/check-in. Confirmar persistência no servidor e auditoria.
-- [ ] Executar `npm test`, `npm run lint`, `npm run build` no ambiente final. A verificação local da Task 7 usa mocks e não substitui testes reais de API.
-- [ ] Em máquina com Flutter/Dart, seguir `apps/student/README.md`: gerar/revisar runners iOS/Android, resolver dependências/lockfile, executar `dart format lib test`, `flutter analyze`, `flutter test` e builds de release. Esses comandos não foram executados neste ambiente sem SDK; parser/imports não verificam tipos, Flutter APIs ou runtime.
-- [ ] Configurar `flutter_secure_storage` 11.2.0: Android minSdk >=23, backup desabilitado/exclusões e Keychain iOS. Testar instalação/upgrade, storage indisponível, reinício, troca de conta/tenant e logout. Não substituir cache sensível por texto simples.
-- [ ] Em dispositivos pequenos iOS/Android, testar teclado, rotação, retorno do background e deadline de descanso; filas após resposta perdida/crash, conflito/idempotência e reconciliação nutricional sem duplicar registros. Testar datas UTC/local e vigências perto da meia-noite.
-- [ ] Confirmar que builds reais não apresentam demo implicitamente. Revisar dados fictícios, nenhuma credencial fixa de produção e nenhum endpoint inventado.
+## Integration and execution
 
-## Revisões humanas e acessibilidade
+- [ ] Configure HTTPS, CORS, allowed origins, and test accounts for multiple tenants. Keep secrets out of `NEXT_PUBLIC_*`, Dart defines, clients, and logs.
+- [ ] Run an end-to-end journey from invitation through workouts, synchronization, assessments, reports, nutrition, hydration, and consent changes, then verify server persistence and audit records.
+- [ ] Run `yarn test`, `yarn test:coverage`, `yarn lint`, and `yarn build` in the release environment.
+- [ ] Generate and review the Android and iOS runners, resolve Flutter dependencies, and run formatting, analysis, tests, and release builds.
+- [ ] Configure `flutter_secure_storage`, including Android SDK requirements and backup exclusions plus the required iOS Keychain capabilities.
+- [ ] Test install, upgrade, storage failure, restart, account and tenant switching, sign-out, offline queues, ambiguous responses, and conflict recovery on real devices.
+- [ ] Test UTC and local dates around midnight and validate that release builds never enable demo mode implicitly.
 
-- [ ] Responsável LGPD/jurídico define base legal/finalidades, minimização, retenção/cache local, canal do encarregado, exportação/exclusão, operadores, incidentes e fluxo 18+ / menores. Publicar termos/política reais por academia antes de coletar dados reais.
-- [ ] Profissionais revisam instruções/mídia, protocolos, faixas de conferência, equações/populações/aplicabilidade, comparação de aparelhos/condições e textos. Sem diagnóstico, melhora/piora automática ou prescrição nutricional não habilitada.
-- [ ] Validar licença/atribuição/importação TBCA e USDA no backend; fontes, versão/preparo, conversão caseira com evidência, precisão e snapshots. Ausência não é zero; cálculos descritivos não criam metas/planos.
-- [ ] Revisar com teclado e leitores de tela (web, VoiceOver, TalkBack), zoom/texto grande, contraste, foco/retorno, nomes dos controles, tabela equivalente dos gráficos, 44 px e movimento reduzido. A auditoria web de 390/1440 px é uma amostra técnica, não certificação.
-- [ ] Comparar com as pranchas aprovadas e revisar estados vazio/loading/erro/sucesso/acesso negado em cada fluxo, inclusive sem mídia, sem contrato profissional seguro e sem provedor.
-- [ ] Validar store signing, privacidade/dados declarados, permissões nativas e publicação com responsáveis iOS/Android. Não enviar avaliações/biometria para analytics ou LLMs.
+## Human review and accessibility
 
-## Evidência local da integração final
+- [ ] Have legal and privacy owners define purpose, legal basis, minimization, retention, local cache policy, data-rights channels, operators, incidents, and rules for minors.
+- [ ] Have qualified professionals review exercise instructions, protocols, ranges, equations, device comparability, nutrition content, and all professional-facing claims.
+- [ ] Validate food data licensing, attribution, preparation states, household measures, precision, and immutable snapshots.
+- [ ] Test keyboard navigation, screen readers, zoom, large text, contrast, focus management, control names, chart alternatives, touch target sizes, and reduced motion.
+- [ ] Review every empty, loading, error, success, denied, and offline state at supported screen sizes.
+- [ ] Validate app signing, privacy declarations, native permissions, analytics boundaries, and store publication requirements.
 
-Em 17/10/2026: `npm test` passou com 88 testes em 17 arquivos; `npm run lint` passou (ESLint e TypeScript); `npm run build` gerou todas as rotas. A análise de fonte verificou 33 arquivos Dart/imports locais, 57 caminhos/77 operações OpenAPI e os destinos literais das 26 rotas web. Nenhum comando Flutter/Dart foi executado.
+## Continuous integration
 
-A navegação demo percorreu as 25 páginas de conteúdo em 390 e 1440 px, incluindo detalhes dinâmicos, sem overflow horizontal da página. O menu mobile foi verificado com Tab/Shift+Tab/Escape e retorno de foco; links/botões visíveis respeitaram 44 px. Isso não substitui a jornada real, leitores de tela ou testes de dispositivo acima.
+The root workflow runs web coverage, tests, lint, type checks, and build, plus Flutter formatting, analysis, and tests. It uploads both LCOV reports to Codecov. These checks use mocks and do not replace a real API-to-device journey or human release review.
