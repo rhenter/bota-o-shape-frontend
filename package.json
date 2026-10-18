@@ -1,13 +1,19 @@
 {
   "name": "bota-o-shape-frontend",
   "private": true,
-  "workspaces": ["apps/admin"],
-  "engines": { "node": ">=24.15.0 <25" },
+  "packageManager": "yarn@4.4.1",
+  "workspaces": [
+    "apps/admin"
+  ],
+  "engines": {
+    "node": ">=24.15.0 <25"
+  },
   "scripts": {
-    "dev": "npm run dev --workspace @bota-o-shape/admin",
-    "build": "npm run build --workspace @bota-o-shape/admin",
-    "start": "npm run start --workspace @bota-o-shape/admin",
-    "lint": "npm run lint --workspace @bota-o-shape/admin",
-    "test": "npm run test --workspace @bota-o-shape/admin"
+    "dev": "yarn workspace @bota-o-shape/admin dev",
+    "build": "yarn workspace @bota-o-shape/admin build",
+    "start": "yarn workspace @bota-o-shape/admin start",
+    "lint": "yarn workspace @bota-o-shape/admin lint",
+    "test": "yarn workspace @bota-o-shape/admin test",
+    "test:coverage": "yarn workspace @bota-o-shape/admin test:coverage"
   }
 }

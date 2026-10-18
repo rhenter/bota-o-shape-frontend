@@ -1,14 +1,135 @@
-node_modules/
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+*.pyo
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+env/
+build/
+develop-eggs/
+dist/
+**/dev-dist/
+downloads/
+eggs/
+.eggs/
+lib/
+!canhoto-simples/src/lib/
+!canhoto-simples/src/lib/**
+!apps/*/src/lib/
+!apps/*/src/lib/**
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*,cover
+.hypothesis/
+.pytest_cache/
+
+# Translations
+*.pot
+
+# Django stuff:
+*.log
+
+# Sphinx documentation
+docs/_build/
+docs/build/
+
+# PyBuilder
+target/
+
+#Ipython Notebook
+.ipynb_checkpoints
+
+# environment
+.env
+.venv
+
+.idea
+.junie
+node_modules
+target
+*.swp
+*.sqlite3
+releases
 .next/
 out/
 coverage/
-*.tsbuildinfo
 .env*
 !.env.example
+.pytest_cache
+*media*
+*media/*
+.vscode/
+*/.pytest_cache
+*.rdb
 .DS_Store
+Pipfile
+Pipfile.*
+
+*db.sqlite3*
+###
+.DS_Store
+
+# Local .terraform directories
+**/.terraform/*
+
+# .tfstate files
+*.tfstate
+*.tfstate.*
+
+# PWA env files
+canhoto-simples/.env
+canhoto-simples/.env.*
+!canhoto-simples/.env.local.example
+
+.output.txt
+
+# Yarn Berry (Yarn 2+/4) — keep essential subfolders, ignore the rest
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+# If you are NOT using Zero-Installs, keep this ignore; if you are, comment it out to commit the cache
+#.yarn/cache
+
+# Yarn PnP artifacts (usually not committed)
+.pnp.*
+
+tsconfig.tsbuildinfo
+*/tsconfig.tsbuildinfo
+
 .dart_tool/
 .flutter-plugins-dependencies
-build/
 apps/student/android/local.properties
 apps/student/ios/Flutter/Generated.xcconfig
 apps/student/ios/Flutter/flutter_export_environment.sh

@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  admin-web:
+    name: Admin web
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24.15.0
+          cache: yarn
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Run tests with coverage
+        run: yarn test:coverage
+
+      - name: Run lint and type checks
+        run: yarn lint
+
+      - name: Build admin application
+        run: yarn build
+
+      - name: Upload web coverage
+        uses: codecov/codecov-action@v5
+        with:
+          files: apps/admin/coverage/lcov.info
+          flags: admin-web
+          fail_ci_if_error: true
+          use_oidc: true
+
+  student-mobile:
+    name: Student mobile
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/student
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.47.7
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Check formatting
+        run: dart format --output=none --set-exit-if-changed lib test
+
+      - name: Analyze source code
+        run: flutter analyze
+
+      - name: Run tests with coverage
+        run: flutter test --coverage
+
+      - name: Upload mobile coverage
+        uses: codecov/codecov-action@v5
+        with:
+          files: apps/student/coverage/lcov.info
+          flags: student-mobile
+          fail_ci_if_error: true
+          use_oidc: true
