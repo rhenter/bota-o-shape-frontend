@@ -9,7 +9,7 @@
     "start": "next start",
     "lint": "eslint . --max-warnings=0 && tsc --noEmit",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage --coverage.reporter=text --coverage.reporter=lcov"
+    "test:coverage": "vitest run --coverage --coverage.reporter=text --coverage.reporter=json-summary"
   },
   "dependencies": {
     "next": "16.4.2",

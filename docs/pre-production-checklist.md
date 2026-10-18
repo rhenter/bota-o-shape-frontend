@@ -37,4 +37,4 @@ The implementation is an integration candidate. Check an item only when the targ
 
 ## Continuous integration
 
-The root workflow runs web coverage, tests, lint, type checks, and build, plus Flutter formatting, analysis, and tests. It uploads both LCOV reports to Codecov. These checks use mocks and do not replace a real API-to-device journey or human release review.
+The root workflow runs web coverage, tests, lint, type checks, and build, plus Flutter formatting, analysis, and tests. It publishes the web coverage badge from the generated summary. These checks use mocks and do not replace a real API-to-device journey or human release review.
