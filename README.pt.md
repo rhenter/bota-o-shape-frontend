@@ -2,7 +2,7 @@
 
 <p align="center">
   <a href="https://github.com/rhenter/bota-o-shape-frontend/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/rhenter/bota-o-shape-frontend/actions/workflows/ci.yml/badge.svg?branch=main" /></a>
-  <a href="https://github.com/rhenter/bota-o-shape-frontend/actions"><img alt="Cobertura de testes" src="https://rhenter.github.io/bota-o-shape-frontend/badges/coverage.svg" /></a>
+  <a href="https://github.com/rhenter/bota-o-shape-frontend/actions"><img alt="coverage" src="badges/coverage.svg" /></a>
   <a href="https://nodejs.org/"><img alt="Node.js 24.15.0" src="https://img.shields.io/badge/node.js-24.15.0-5FA04E?logo=nodedotjs&logoColor=white" /></a>
   <a href="https://react.dev/"><img alt="React 19.3.1" src="https://img.shields.io/badge/react-19.3.1-61DAFB?logo=react&logoColor=black" /></a>
   <a href="https://flutter.dev/"><img alt="Flutter 3.47.7" src="https://img.shields.io/badge/flutter-3.47.7-02569B?logo=flutter&logoColor=white" /></a>
