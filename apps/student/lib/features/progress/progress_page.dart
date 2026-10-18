@@ -75,12 +75,12 @@ class _ProgressPageState extends State<ProgressPage> {
       if (choices.isNotEmpty) InputDecorator(decoration: const InputDecoration(labelText: 'Métrica e método'),
         child: DropdownButton<String>(value: choiceId, isExpanded: true, itemHeight: null, items: choices.map((entry) {
           final m = entry.measurement;
-          return DropdownMenuItem(value: m['id'] as String, child: Text('${m['metric']} · ${m['unit']} · ${m['method']} · ${m['anatomical_site']} · ${m['side']} · protocolo ${m['protocol'] ?? 'não informado'}', maxLines: 3));
+          return DropdownMenuItem(value: m['id'] as String, child: Text('${m['metric']} · ${m['unit']} · ${measurementMethod(m['method'])} · ${m['anatomical_site']} · ${measurementSide(m['side'])} · protocolo ${m['protocol'] ?? 'não informado'}', maxLines: 3));
         }).toList(), onChanged: (value) => setState(() { _metric = value; }))),
       Wrap(spacing: 8, children: [for (final entry in {30: '1 mês', 90: '3 meses', 180: '6 meses', 0: 'Tudo'}.entries)
         ChoiceChip(label: Text(entry.value), selected: _days == entry.key, onSelected: (_) => setState(() { _days = entry.key; }))]),
       if (selected != null) SectionCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('$metric · ${selected['unit']} · ${selected['method']}'),
+        Text('$metric · ${selected['unit']} · ${measurementMethod(selected['method'])}'),
         const Text('Comparação exige mesmo método, unidade, protocolo, ponto, lado, aparelho e condições registradas. Cada barra representa uma avaliação. Lacunas indicam ausência de medida compatível; não são zero.'),
         for (var i = 0; i < series.length; i++) Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Column(
           crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -111,8 +111,8 @@ class AssessmentReportPage extends StatelessWidget {
     for (final measurement in (assessment['measurements'] as List<dynamic>).cast<Map<String, dynamic>>())
       SectionCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('${measurement['metric']}: ${measurement['raw_value']} ${measurement['unit']}'),
-        Text('Método: ${measurement['method']} · protocolo: ${measurement['protocol'] ?? 'Não informado'}'),
-        Text('Ponto: ${measurement['anatomical_site']} · lado: ${measurement['side']} · origem: ${measurement['origin']}'),
+        Text('Método: ${measurementMethod(measurement['method'])} · protocolo: ${measurement['protocol'] ?? 'Não informado'}'),
+        Text('Ponto: ${measurement['anatomical_site']} · lado: ${measurementSide(measurement['side'])} · origem: ${measurement['origin']}'),
         if ((measurement['equation_metadata'] as Map?)?.isNotEmpty == true) Text('Equação e aplicabilidade: ${measurement['equation_metadata']}'),
         if (measurement['possible_error'] == true) const Text('Medida sinalizada para revisão profissional.'),
         Text(_comparison(measurement)),

@@ -8,6 +8,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('sides are translated and bioimpedance requires a complete device identity', () {
+    expect(measurementSide('left'), 'Esquerdo');
+    expect(measurementSide('right'), 'Direito');
+    final value = <String, dynamic>{'method': 'bioimpedance'};
+    for (final device in [{}, {'brand': 'A'}, {'model': '1'}, {'brand': 'A', 'model': ' '}]) {
+      expect(compatibleMeasurement(value, value, {'device': device}, {'device': device}), isFalse);
+    }
+    final complete = <String, dynamic>{'device': {'brand': 'A', 'model': '1'}};
+    expect(compatibleMeasurement(value, value, complete, complete), isTrue);
+  });
   Map<String, dynamic> measurement(String value) => {'metric': 'weight', 'unit': 'kg', 'raw_value': value,
     'side': '', 'anatomical_site': '', 'method': 'scale', 'protocol': 'protocol-1', 'origin': 'manual',
     'possible_error': false, 'equation_metadata': <String, dynamic>{}};

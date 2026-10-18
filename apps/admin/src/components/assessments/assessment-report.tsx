@@ -17,9 +17,10 @@ import {
   comparisonLabels,
   compatibleMeasurements,
   measurementMethod,
+  measurementSide,
   assessmentContext,
 } from "@/lib/assessments";
-import { AssessmentChart, sameDevice } from "./assessment-chart";
+import { AssessmentChart, compatibleAssessmentContext } from "./assessment-chart";
 const nextStatus: Partial<Record<AssessmentStatus, AssessmentStatus>> = {
   draft: "reviewed",
   reviewed: "completed",
@@ -245,7 +246,7 @@ function Content({ assessmentId }: { assessmentId?: string }) {
                 );
                 const priorAssessment = previous.find(
                   (a) =>
-                    sameDevice(a, current, m.method) &&
+                    compatibleAssessmentContext(a, current, m.method) &&
                     a.measurements.some((p) =>
                       comparison?.previous_measurement_id
                         ? p.id === comparison.previous_measurement_id &&
@@ -300,7 +301,7 @@ function Content({ assessmentId }: { assessmentId?: string }) {
                       )}
                     </td>
                     <td>
-                      {m.side || "—"} · {m.anatomical_site || "—"}
+                      {measurementSide(m.side) || "—"} · {m.anatomical_site || "—"}
                     </td>
                     <td>
                       {state !== "not_comparable" && prior
@@ -327,7 +328,8 @@ function Content({ assessmentId }: { assessmentId?: string }) {
         </div>
         <p className="help-text">
           Comparação exige mesma métrica, unidade, lado, ponto anatômico, método
-          e protocolo. Aparelhos de bioimpedância diferentes não recebem
+          e protocolo, origem, equação e condições compatíveis, sem valores
+          sinalizados para conferência. Aparelhos de bioimpedância diferentes não recebem
           comparação direta.
         </p>
         {report?.professional_interpretation && (

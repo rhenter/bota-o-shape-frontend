@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import type { ApiAssessment, ApiMeasurement } from "@/lib/api-client";
-import { compatibleMeasurements, measurementMethod } from "@/lib/assessments";
+import { compatibleMeasurements, measurementMethod, measurementSide } from "@/lib/assessments";
 import { assessmentDateKey, assessmentTimeZone } from "@/lib/dates";
 
 export function sameDevice(a: ApiAssessment, b: ApiAssessment, method: string) {
@@ -23,6 +23,11 @@ export function sameDevice(a: ApiAssessment, b: ApiAssessment, method: string) {
     hasIdentity(b.device) &&
     identity(a.device) === identity(b.device)
   );
+}
+
+export function compatibleAssessmentContext(a: ApiAssessment, b: ApiAssessment, method: string) {
+  return sameDevice(a, b, method) &&
+    JSON.stringify(a.preparation_conditions) === JSON.stringify(b.preparation_conditions);
 }
 export function AssessmentChart({
   assessments,
@@ -47,7 +52,7 @@ export function AssessmentChart({
     .sort((a, b) => a.assessed_at.localeCompare(b.assessed_at))
     .map((a) => ({
       assessment: a,
-      measurement: sameDevice(a, current, metric.method)
+      measurement: compatibleAssessmentContext(a, current, metric.method)
         ? a.measurements.find((m) => compatibleMeasurements(metric, m))
         : undefined,
     }));
@@ -72,7 +77,7 @@ export function AssessmentChart({
           >
             {current.measurements.map((m, i) => (
               <option value={i} key={i}>
-                {m.metric} ({m.unit}) · {m.side || "sem lado"} ·{" "}
+                {m.metric} ({m.unit}) · {measurementSide(m.side) || "sem lado"} ·{" "}
                 {m.anatomical_site}
               </option>
             ))}
@@ -97,7 +102,8 @@ export function AssessmentChart({
       </div>
       <p className="help-text">
         {measurementMethod(metric.method)} · unidade: {metric.unit}. Apenas
-        avaliações concluídas ou liberadas. Lacunas indicam ausência de medida
+        avaliações concluídas ou liberadas com origem, equação e condições
+        compatíveis e sem valor sinalizado para conferência. Lacunas indicam ausência de medida
         compatível; não há equivalência entre aparelhos de bioimpedância. Datas
         no horário de São Paulo.
       </p>

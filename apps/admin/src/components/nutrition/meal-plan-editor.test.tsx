@@ -74,18 +74,23 @@ describe("nutrition and team safeguards", () => {
           food_id: "f",
           description: "Arroz",
           preparation_state: "Cozido",
-          grams: "100",
+          grams: "50",
           source: "tbca",
           source_version: "2023",
           external_id: "123",
           estimated: true,
           nutrients: {
             protein: { name: "Proteína", value: "0", per_100g: "0", unit: "g" },
+            fiber: { name: "Fibra", value: "1.25", per_100g: "2.5", unit: "g" },
+            fat: { name: "Gordura", value: "", per_100g: "", unit: "g" },
           },
         }}
       />,
     );
     expect(screen.getByText("0 g")).toBeVisible();
+    expect(screen.getByText("1,25 g")).toBeVisible();
+    expect(screen.getByText("Base por 100 g: 2,5 g")).toBeVisible();
+    expect(screen.getByText("Base por 100 g: Não informado")).toBeVisible();
     expect(screen.getAllByText("Não informado").length).toBeGreaterThan(0);
   });
   it("shows combined professional roles and safe reset copy", () => {

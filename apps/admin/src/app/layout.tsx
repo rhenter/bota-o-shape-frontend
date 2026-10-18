@@ -5,7 +5,7 @@ import { DemoProvider } from "@/components/app-shell";
 
 export const metadata: Metadata = {
   title: { default: "Bota o Shape!", template: "%s · Bota o Shape!" },
-  description: "Painel da academia — ambiente de demonstração.",
+  description: "Painel profissional e administrativo da academia.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

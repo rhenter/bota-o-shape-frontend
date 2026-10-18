@@ -94,6 +94,10 @@ export function FoodSearch({
 }
 export function FoodComposition({ snapshot }: { snapshot?: FoodSnapshot }) {
   const nutrients = Object.values(snapshot?.nutrients ?? {});
+  const formatNutrient = (value: string | undefined, unit: string) =>
+    value != null && value.trim() !== "" && Number.isFinite(Number(value))
+      ? `${Number(value).toLocaleString("pt-BR")} ${unit}`
+      : "Não informado";
   return (
     <>
       <p className="muted">
@@ -106,9 +110,10 @@ export function FoodComposition({ snapshot }: { snapshot?: FoodSnapshot }) {
           <div key={i}>
             <dt>{n.name}</dt>
             <dd>
-              {Number.isFinite(Number(n.value))
-                ? `${Number(n.value).toLocaleString("pt-BR")} ${n.unit}`
-                : "Não informado"}
+              {formatNutrient(n.value, n.unit)}
+              <small className="nutrient-basis">
+                Base por 100 g: {formatNutrient(n.per_100g, n.unit)}
+              </small>
             </dd>
           </div>
         ))}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { compareMeasurements } from "./assessments";
+import { compareMeasurements, measurementSide } from "./assessments";
 import type { ApiMeasurement } from "./api-client";
 const current: ApiMeasurement = {
   id: "m1",
@@ -15,12 +15,21 @@ const current: ApiMeasurement = {
   possible_error: false,
 };
 describe("comparação de avaliação", () => {
+  it("apresenta os lados em português sem alterar valores do contrato", () => {
+    expect(measurementSide("left")).toBe("Esquerdo");
+    expect(measurementSide("right")).toBe("Direito");
+    expect(measurementSide("")).toBe("");
+    expect(measurementSide("central")).toBe("central");
+  });
   it.each([
     { method: "bioimpedance" },
     { protocol: "p2" },
     { anatomical_site: "Umbigo" },
     { side: "left" },
     { unit: "mm" },
+    { origin: "imported" },
+    { equation_metadata: { equation: "outra equação" } },
+    { possible_error: true },
   ])("não compara coleta incompatível: %o", (change) => {
     expect(
       compareMeasurements(current, { ...current, ...change, raw_value: "80" }),

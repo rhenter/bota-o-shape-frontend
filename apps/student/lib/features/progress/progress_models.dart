@@ -8,6 +8,12 @@ bool compatibleMeasurement(Map<String, dynamic> a, Map<String, dynamic> b,
     if (a[key] != b[key]) return false;
   }
   if (a['possible_error'] == true || b['possible_error'] == true) return false;
+  if (a['method'] == 'bioimpedance') {
+    for (final assessment in [assessmentA, assessmentB]) {
+      final device = assessment['device'];
+      if (device is! Map || ['brand', 'model'].any((key) => device[key] is! String || (device[key] as String).trim().isEmpty)) return false;
+    }
+  }
   bool same(Object? x, Object? y) {
     if (x is Map && y is Map) return x.length == y.length && x.keys.every((key) => y.containsKey(key) && same(x[key], y[key]));
     if (x is List && y is List) return x.length == y.length && List.generate(x.length, (i) => same(x[i], y[i])).every((v) => v);
@@ -17,6 +23,10 @@ bool compatibleMeasurement(Map<String, dynamic> a, Map<String, dynamic> b,
       same(assessmentA['device'], assessmentB['device']) &&
       same(assessmentA['preparation_conditions'], assessmentB['preparation_conditions']);
 }
+
+String measurementSide(Object? side) => const {'left': 'Esquerdo', 'right': 'Direito', 'bilateral': 'Bilateral'}[side] ?? '$side';
+String measurementMethod(Object? method) => const {'circumference': 'Perímetros', 'skinfold': 'Dobras cutâneas',
+  'bioimpedance': 'Bioimpedância', 'scale': 'Balança'}[method] ?? '$method';
 
 class MeasurementChange {
   const MeasurementChange(this.difference, this.percent);

@@ -42,6 +42,17 @@ const c: ApiAssessment = {
   measurements: [{ ...a.measurements[0], id: "m3", raw_value: "80" }],
 };
 describe("gráfico acessível", () => {
+  it("preserva lacuna quando as condições da coleta diferem e traduz o lado", () => {
+    const current = { ...c, preparation_conditions: { hydration: "habitual" },
+      measurements: [{ ...c.measurements[0], side: "left" }] };
+    const previous = { ...a, preparation_conditions: { hydration: "não informada" },
+      measurements: [{ ...a.measurements[0], side: "left" }] };
+    render(<AssessmentChart assessments={[previous, current]} current={current} />);
+    expect(screen.getByRole("option")).toHaveTextContent("Esquerdo");
+    const table = screen.getByRole("table");
+    expect(within(table).getByText("Sem comparação direta / medida ausente")).toBeVisible();
+    expect(within(table).queryByText("82 cm")).not.toBeInTheDocument();
+  });
   it("preserva a lacuna incompatível e oferece tabela com unidade e datas", async () => {
     const user = userEvent.setup();
     const { container } = render(

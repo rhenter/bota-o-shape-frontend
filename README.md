@@ -1,6 +1,6 @@
 # Bota o Shape! — frontends
 
-Dois aplicativos independentes: painel profissional/administrativo em Next.js e app do aluno em Flutter. O painel inclui acesso, recuperação de senha, shell responsivo, dashboard, alunos/perfil, biblioteca/editor de exercícios, inventário de equipamentos, modelos/atribuições de treino, coleta/relatório de avaliações, agenda, carteira/editor nutricional, catálogo de alimentos, equipe, configurações, auditoria e assinatura da academia. O app do aluno permanece na base inicial.
+Dois aplicativos independentes: painel profissional/administrativo em Next.js e app do aluno em Flutter. O painel inclui acesso, recuperação de senha, shell responsivo, dashboard, alunos/perfil, biblioteca/editor de exercícios, inventário de equipamentos, modelos/atribuições de treino, coleta/relatório de avaliações, agenda, carteira/editor nutricional, catálogo de alimentos, equipe, configurações, auditoria e assinatura da academia. O app Flutter inclui acesso por convite, consentimentos, treino atribuído/execução/histórico, progresso, plano/diário nutricional e perfil/privacidade; a execução com SDK e dispositivos ainda precisa ser validada.
 
 ## Painel web
 
@@ -37,7 +37,7 @@ Limitações atuais do contrato backend: não existe endpoint `/me`; `/users/` e
 
 O montador permite criar dias, buscar exercícios, reordená-los por botões acessíveis, editar alvos de cada série e manter a observação do professor separada das instruções da biblioteca e da nota pessoal do aluno. A prévia reproduz essa separação. Após publicar, atribua a versão ao aluno com início e término opcionais. A lista mostra atribuições e sessões recebidas do app.
 
-A coleta usa protocolos ativos e registros reais de consentimento do aluno. Medidas brutas preservam unidade, método, protocolo, lado, ponto anatômico, origem, aparelho e condições. Valores fora da faixa de conferência da API recebem aviso sem bloqueio. O fluxo segue `draft → reviewed → completed → released`; somente a liberação gera o relatório backend. O gráfico oferece tabela equivalente, filtro de intervalo e lacunas de comparabilidade; a interface só compara aparelhos de bioimpedância com marca e modelo explícitos, não vazios e compatíveis, e não compara aparelhos diferentes nem atribui melhora/piora automática.
+A coleta usa protocolos ativos e registros reais de consentimento do aluno. Medidas brutas preservam unidade, método, protocolo, lado, ponto anatômico, origem, aparelho e condições. Valores fora da faixa de conferência da API recebem aviso sem bloqueio. O fluxo segue `draft → reviewed → completed → released`; somente a liberação gera o relatório backend. O gráfico oferece tabela equivalente, filtro de intervalo e lacunas de comparabilidade; a interface exige origem, equação e condições compatíveis, sem medidas sinalizadas para conferência, e só compara aparelhos de bioimpedância com marca e modelo explícitos, não vazios e compatíveis, e não compara aparelhos diferentes nem atribui melhora/piora automática.
 
 Limitações precisas do backend: serializers de treino e avaliação implementam criação aninhada, mas não atualização aninhada. Assim, dias/exercícios/séries ficam em leitura nos rascunhos e revisões já salvos via API; os metadados do treino continuam editáveis. Medidas salvas não têm editor nesta etapa. A revisão usa o endpoint real e preserva `version`/`supersedes` retornados. O DTO de avaliação não expõe o avaliador; não há rota para editar interpretação do relatório, exportar PDF, programar recorrência semanal ou agendar avaliação. Os protocolos devem ser cadastrados na administração da API. A agenda mostra apenas início/término das atribuições ativas e datas das avaliações registradas, sem inventar compromissos ou enviar notificações. A API atual retorna avaliações, atribuições, sessões e consentimentos por academia para profissionais, sem fornecer uma relação segura de alunos vinculados; a transição da avaliação também não verifica esse vínculo. Por isso, no modo API, perfis sem administração/owner não consultam nem exibem esses recursos e não recebem ações de coleta, atribuição ou liberação. Catálogos de modelos/protocolos permanecem disponíveis. A administração/owner mantém o escopo da academia ativa. O backend precisa filtrar as leituras e validar cada mutação por vínculo de aluno; o bloqueio de interface não corrige a autorização do servidor. Filtros e exibição de datas das avaliações e agenda usam `America/Sao_Paulo`.
 
@@ -57,22 +57,26 @@ Requisitos: Flutter estável com Dart 3.8 ou superior. Os fontes e assets estão
 cd apps/student
 flutter create --platforms=android,ios --project-name bota_o_shape_student .
 flutter pub get
-dart format lib
+dart format lib test
 flutter analyze
 flutter test
 flutter run
 ```
 
-Revise os arquivos gerados pelo `flutter create` e preserve os fontes e o `pubspec.yaml` deste repositório. O SDK Flutter/Dart não está disponível no ambiente que criou esta base; análise, formatação, testes e execução mobile ainda precisam ser realizados com o SDK. A pasta `test` será incluída junto aos fluxos do aluno nas próximas etapas.
+Revise os arquivos gerados pelo `flutter create` e preserve os fontes e o `pubspec.yaml` deste repositório. O SDK Flutter/Dart não está disponível no ambiente que criou esta base; análise, formatação, testes e execução mobile ainda precisam ser realizados com o SDK. Os testes unitários e de widgets estão em `apps/student/test`; sua presença não representa execução. Consulte [o README mobile](apps/student/README.md) para configuração HTTPS, demo explícita, armazenamento seguro, runners e limitações de sincronização.
 
 ## Dados e integração futura
 
 - `apps/admin/src/lib/domain.ts` contém modelos de apresentação, sem presumir contratos HTTP.
 - `demo-data.ts` isola fixtures fictícias; `DemoRepository` em `demo-repository.ts` oferece leituras por `{ userId, tenantId }`, retornando cópias para não alterar snapshots por acidente. `demoIds` identifica o profissional e as academias de exemplo.
-- `apps/student/lib/core/data/demo_repository.dart` contém a interface `StudentRepository` e sua implementação demonstrativa, limitada ao aluno fixo do exemplo.
-- O modo demo não autentica, persiste ou envia dados. O modo API usa o backend real nos fluxos já conectados acima. Ainda não há checkout ou importação TBCA/USDA no frontend. Conteúdo de exercício e valores nutricionais das fixtures são fictícios. Nenhum fluxo demonstrativo representa habilitação profissional real.
-- `canPublishMealPlan` exige vínculo ativo, papel de nutricionista, CRN/UF verificado, aluno atribuído e consentimento. `canManageBilling` exige `billing.manage` no tenant ativo. São controles de interface: a futura API deve autenticar e autorizar cada operação independentemente.
+- `apps/student/lib/core/data/student_gateway.dart` separa `StudentGateway`, adaptador real e demonstração; `student_health_repository.dart` integra progresso/nutrição e intents locais criptografadas. `demo_repository.dart` preserva a base demonstrativa inicial.
+- O modo demo não autentica, persiste ou envia dados. O modo API usa o backend real nos fluxos já conectados acima. A cobrança web abre somente links HTTPS retornados pelo portal/checkout hospedado; o provedor backend precisa ser configurado. A importação TBCA/USDA pertence ao backend. Conteúdo de exercício e valores nutricionais das fixtures são fictícios. Nenhum fluxo demonstrativo representa habilitação profissional real.
+- `canPublishMealPlan` exige vínculo ativo, papel de nutricionista, CRN/UF verificado, aluno atribuído e consentimento. `canManageBilling` exige `billing.manage` no tenant ativo. São controles de interface: a API deve autorizar cada leitura/mutação independentemente; os gaps atuais de escopo/autorização abaixo bloqueiam produção.
 - Nutrientes desconhecidos permanecem `null`/`undefined` no web e `null` no Flutter; a interface deve exibir “Não informado”. Não converter ausência em zero. Valores por porção são descritivos e não geram metas.
-- Substituir os repositórios por adaptadores tipados somente quando os contratos oficiais da API estiverem disponíveis. Nenhuma chave secreta é necessária para a demonstração.
+- Os adaptadores tipados já consomem o OpenAPI do backend irmão. Amplie-os quando novos contratos forem implementados; falhas não selecionam demo. Nenhuma chave secreta é necessária para a demonstração.
 
 As cores base estão em `globals.css` e `AppTheme`. A logo original foi copiada sem modificação para os assets de cada plataforma. A academia é a cliente pagadora; o app do aluno não contém cobrança individual.
+
+## Entrega e liberação
+
+A arquitetura, o inventário de rotas e os contratos estão em [docs/frontend-architecture.md](docs/frontend-architecture.md). O [checklist de pré-produção](docs/pre-production-checklist.md) separa os bloqueadores de API, validação mobile e revisões humanas. Testes web usam APIs simuladas: o build aprovado não comprova uma jornada real completa no backend. Não há declaração de conformidade legal, clínica, acessibilidade integral ou aprovação em lojas.

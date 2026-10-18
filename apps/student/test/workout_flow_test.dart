@@ -9,6 +9,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  for (final action in ['skip', 'substitute']) {
+    testWidgets('$action clears the displayed saved series and input values', (tester) async {
+      final plan = (await DemoStudentGateway().workouts()).first;
+      final flow = WorkoutController(plan: plan);
+      flow.record(0, plan.exercises.first.sets.first, {'load_kg': 12.5, 'repetitions': 10});
+      await tester.pumpWidget(MaterialApp(home: SetsPage(flow: flow, exerciseIndex: 0)));
+      expect(find.text('Série 1 · registrada'), findsOneWidget);
+      expect(tester.widgetList<TextFormField>(find.byType(TextFormField)).any((field) => field.controller?.text == '12.5'), isTrue);
+      if (action == 'skip') { flow.skip(0); } else { flow.substitute(0); }
+      await tester.pump();
+      expect(find.textContaining('· registrada'), findsNothing);
+      expect(tester.widgetList<TextFormField>(find.byType(TextFormField)).every((field) => field.controller?.text.isEmpty == true), isTrue);
+      expect(flow.completedSets, 0);
+      await tester.pumpWidget(const SizedBox());
+      flow.dispose();
+    });
+  }
+
   testWidgets('student navigation has five destinations and no commercial tools', (tester) async {
     final gateway = DemoStudentGateway();
     await tester.pumpWidget(MaterialApp(home: StudentShell(

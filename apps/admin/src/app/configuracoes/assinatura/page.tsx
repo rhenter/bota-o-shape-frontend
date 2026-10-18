@@ -240,7 +240,7 @@ function BillingContent() {
             <ul className="record-list">
               {snapshot.entitlements.map((e) => (
                 <li key={e.id}>
-                  {e.key} ·{" "}
+                  {e.key} · {e.enabled ? "Habilitado" : "Desabilitado"} ·{" "}
                   {e.limit === null
                     ? "Sem limite informado"
                     : `Limite: ${e.limit}`}{" "}

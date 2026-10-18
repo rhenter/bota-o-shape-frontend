@@ -286,8 +286,9 @@ function Editor({
     <>
       <p className="notice">
         Responsável: {user.name} · CRN {user.nutritionRegistration?.crn}/
-        {user.nutritionRegistration?.uf}. A API revalida a autorização em cada
-        ação.
+        {user.nutritionRegistration?.uf}. O painel confere papel, CRN/UF,
+        vínculo e consentimento antes de criar, revisar ou publicar. A API
+        ainda precisa validar vínculo e consentimento em todas essas ações.
       </p>
       {error && <ErrorState description={error} />}
       <div className="editor-grid">

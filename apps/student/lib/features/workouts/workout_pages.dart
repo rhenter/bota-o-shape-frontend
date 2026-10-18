@@ -235,6 +235,15 @@ class _SetEntryCardState extends State<SetEntryCard> {
       name: TextEditingController(text: widget.initial?[name]?.toString() ?? '')};
   late bool _registered = widget.initial != null;
   @override
+  void didUpdateWidget(covariant SetEntryCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initial != null && widget.initial == null) {
+      _form.currentState?.reset();
+      for (final controller in _fields.values) { controller.clear(); }
+      _registered = false;
+    }
+  }
+  @override
   void dispose() { for (final c in _fields.values) { c.dispose(); } super.dispose(); }
   Map<String, String> get _labels => {
     if (widget.trackingType == 'load_reps' || widget.trackingType == 'substitution') 'load_kg': 'Carga (kg)',

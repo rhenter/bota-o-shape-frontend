@@ -26,6 +26,10 @@ body {
 }
 a {
   color: inherit;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  min-width: 44px;
 }
 button,
 input,
@@ -827,7 +831,7 @@ button:disabled {
 }
 .segmented-control button {
   border: 0;
-  min-height: 40px;
+  min-height: 44px;
   background: white;
   padding: 8px 12px;
   border-radius: 4px;
@@ -1667,10 +1671,15 @@ button:disabled {
   gap: 20px;
   border-bottom: 1px solid var(--border);
   padding: 10px 0;
+  overflow-wrap: anywhere;
 }
 .detail-list dd {
   margin: 0;
   text-align: right;
+}
+.nutrient-basis {
+  display: block;
+  color: var(--text-muted);
 }
 .detail-list dt {
   color: var(--text-muted);

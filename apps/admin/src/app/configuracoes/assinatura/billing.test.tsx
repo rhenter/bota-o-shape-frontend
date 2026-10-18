@@ -79,6 +79,11 @@ function mockApi(roles: ApiRole[]) {
           hosted_url: "javascript:alert(1)",
         },
       ]);
+    if (url.endsWith("entitlements/"))
+      return page([
+        { id: "e1", key: "nutrition", enabled: true, limit: 10, source: "contract" },
+        { id: "e2", key: "exports", enabled: false, limit: null, source: "contract" },
+      ]);
     if (url.endsWith("portal/")) {
       portalCalls++;
       return portalCalls === 1
@@ -129,6 +134,8 @@ describe("academy billing", () => {
     );
     await user.click(screen.getByRole("button", { name: "Entrar" }));
     await screen.findByText("Cancelamento agendado");
+    expect(screen.getByText(/nutrition · Habilitado · Limite: 10/)).toBeVisible();
+    expect(screen.getByText(/exports · Desabilitado · Sem limite informado/)).toBeVisible();
     expect(screen.getByText(/R\$\s125,00/)).toBeVisible();
     expect(screen.getByText("Conforme contrato")).toBeVisible();
     expect(

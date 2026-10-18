@@ -389,7 +389,7 @@ function useAppValue(mode: "demo" | "api") {
             allowed(scope) && membership?.roles.includes("admin")
               ? snapshot.team
               : [],
-          // Later task adapters add these resources; never replace missing API data with fixtures.
+          // Dedicated training/nutrition hooks load these API resources; never use fixtures as fallback.
           getWorkouts: () => [],
           getAssessments: () => [],
           getFoods: () => [],

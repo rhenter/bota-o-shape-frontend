@@ -6,9 +6,13 @@ export const comparisonLabels = {
   unchanged: "Sem alteração",
 };
 export function compatibleMeasurements(a: ApiMeasurement, b: ApiMeasurement) {
+  const fields = ["metric", "unit", "side", "anatomical_site", "method", "protocol", "origin"] as const;
   return (
-    ["metric", "unit", "side", "anatomical_site", "method", "protocol"] as const
-  ).every((key) => a[key] === b[key]);
+    fields.every((key) => a[key] === b[key]) &&
+    !a.possible_error &&
+    !b.possible_error &&
+    JSON.stringify(a.equation_metadata) === JSON.stringify(b.equation_metadata)
+  );
 }
 export function compareMeasurements(
   current: ApiMeasurement,
@@ -41,6 +45,10 @@ export function measurementMethod(method: string): string {
       bioimpedance: "Bioimpedância",
     }[method] ?? method
   );
+}
+
+export function measurementSide(side: string): string {
+  return { left: "Esquerdo", right: "Direito", bilateral: "Bilateral" }[side] ?? side;
 }
 
 export function assessmentContext(record: Record<string, unknown>): string {
