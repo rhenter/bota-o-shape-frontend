@@ -88,51 +88,59 @@ git clone https://github.com/rhenter/bota-o-shape-frontend.git
 cd bota-o-shape-frontend
 ```
 
-### 2. Run the Next.js admin dashboard
+### 2. Prepare the applications
+
+Run the remaining commands from the repository root. The project includes a `Makefile` so you do not need to remember the underlying Yarn and Flutter commands:
 
 ```bash
-corepack enable
-yarn install
-cp apps/admin/.env.example apps/admin/.env.local
-yarn dev
+make help
+make setup
 ```
 
-Open [http://localhost:3000](http://localhost:3000). The default API address is `http://127.0.0.1:8000`; change `NEXT_PUBLIC_API_BASE_URL` in `apps/admin/.env.local` when necessary. Public variables must never contain credentials or secrets.
+`run` starts an application for local use and keeps the process running while you develop. `build` compiles and optimizes an application into production artifacts; it does not start the application. Setup checks the Flutter Android/iOS runners, downloads dependencies, and creates `apps/admin/.env.local` when it does not exist.
+
+### 3. Run the Next.js admin dashboard
+
+```bash
+make portal-run
+```
+
+Open [http://localhost:3000](http://localhost:3000). The default API address is `http://127.0.0.1:8006`; change `API_BASE_URL` in `apps/admin/.env.local` when necessary. The portal sends `/api/*` through the Next.js server so local authentication does not depend on browser CORS configuration.
 
 To use local demo data:
 
 ```bash
-NEXT_PUBLIC_DATA_MODE=demo yarn dev
+make portal-demo
 ```
 
-Useful checks:
+To create and run an optimized production build:
 
 ```bash
-yarn test
-yarn test:coverage
-yarn lint
-yarn build
+make portal-build
+make portal-start
 ```
 
-### 3. Run the Flutter student app
+Use `make portal-check` to run linting, type checking, and tests.
 
-The native runners are generated locally until they are committed and validated:
+### 4. Run the Flutter student app
+
+Connect an Android/iOS device or start an emulator/simulator, then run:
 
 ```bash
-cd apps/student
-flutter create --platforms=android,ios --project-name bota_o_shape_student .
-flutter pub get
-dart format lib test
-flutter analyze
-flutter test
-flutter run --dart-define=API_BASE_URL=https://api.example.com/
+make student-run API_BASE_URL=https://api.example.com/
 ```
+
+Replace the example URL with the public URL of your API. The native Android and iOS runners are included in the repository; the build commands restore a missing runner before building when necessary.
 
 To expose the explicit demo option:
 
 ```bash
-flutter run --dart-define=STUDENT_DEMO=true
+make student-demo
 ```
+
+Use `make student-check` to format, analyze, and test the app. Use `make student-build-android` to create an Android APK or `make student-build-ios` to create an iOS simulator app without requiring an Apple Development Team. Pass `API_BASE_URL` to either build command as shown for `student-run`.
+
+The iOS build uses Xcode from `/Applications/Xcode.app` by default. Select it once with `sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer`. If Xcode is installed elsewhere, pass `XCODE_DEVELOPER_DIR=/path/to/Xcode.app/Contents/Developer` to `make student-build-ios`.
 
 See the [student app guide](apps/student/README.md) for local HTTP configuration, secure storage requirements, synchronization behavior, and current native limitations.
 
@@ -156,6 +164,7 @@ See the [student app guide](apps/student/README.md) for local HTTP configuration
 │       ├── lib/
 │       └── test/
 ├── docs/                # Architecture and release documentation
+├── Makefile             # Setup, run, build, and check commands
 ├── package.json         # Yarn workspace commands
 └── yarn.lock            # Locked web dependencies
 ```

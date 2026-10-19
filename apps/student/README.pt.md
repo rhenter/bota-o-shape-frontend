@@ -6,13 +6,12 @@ App Flutter nativo (iOS/Android), em pt-BR, com acesso do aluno pela academia. P
 
 ## Executar
 
-O ambiente de desenvolvimento tem Flutter 3.47.7 e Dart 3.13.5. A formatação, a análise estática e os 57 testes passam. Builds Android ainda exigem o Android SDK; builds iOS exigem uma instalação completa do Xcode e CocoaPods. Os runners iOS/Android ainda precisam ser gerados e revisados.
+O ambiente de desenvolvimento tem Flutter 3.47.7 e Dart 3.13.5. A formatação, a análise estática e os 58 testes passam. Builds Android ainda exigem o Android SDK; builds iOS exigem uma instalação completa do Xcode e CocoaPods. Os runners iOS/Android estão incluídos no repositório.
 
 Com Flutter 3.47.7 e Dart 3.13.5:
 
 ```sh
 cd apps/student
-flutter create --platforms=ios,android --project-name bota_o_shape_student .
 flutter pub get
 dart format lib test
 flutter analyze
@@ -38,7 +37,7 @@ Demo vem **desativada**. Falhas de API nunca selecionam demo automaticamente. Os
 
 ## Armazenamento e configuração nativa
 
-A única dependência de runtime adicionada é [`flutter_secure_storage` 11.2.0](https://pub.dev/packages/flutter_secure_storage). Ela fornece Keychain/armazenamento criptografado para tokens, treino atribuído, preferências, rascunhos de execução e fila de sessões. Configure os runners segundo a documentação do plugin: Android minSdk >=23 e backup desabilitado/exclusão dos dados do plugin (`android:allowBackup="false"`); no iOS, habilite os recursos Keychain necessários ao ambiente de assinatura. Não usar SharedPreferences/arquivos de texto para esses dados. Ainda é necessário validar no dispositivo real; não há lockfile Flutter gerado neste ambiente.
+A única dependência de runtime adicionada é [`flutter_secure_storage` 11.2.0](https://pub.dev/packages/flutter_secure_storage). Ela fornece Keychain/armazenamento criptografado para tokens, treino atribuído, preferências, rascunhos de execução e fila de sessões. Configure os runners segundo a documentação do plugin: Android minSdk >=23 e backup desabilitado/exclusão dos dados do plugin (`android:allowBackup="false"`); no iOS, habilite os recursos Keychain necessários ao ambiente de assinatura. Não usar SharedPreferences/arquivos de texto para esses dados. Ainda é necessário validar no dispositivo real.
 
 Os tokens ficam em um único registro por origem da API. Cache/fila/rascunhos ficam separados por origem, aluno e tenant; demo usa namespace próprio. Login restaurado exige conexão para listar academias e validar vínculo. Dentro de uma sessão ativa, uma falha de leitura apresenta erro e oferece **Abrir treino salvo neste aparelho**, sem substituir silenciosamente uma resposta da API. A cópia pode estar desatualizada; data de vigência é checada localmente e o servidor revalida vínculo e atribuição no envio. A fila é persistida antes do envio, mantém a chave de idempotência e sobrevive a reinício em modo API. Rascunhos preservam séries e notas ao reabrir o treino. Sair remove os tokens e tenta revogar refresh; os registros pendentes ficam criptografados para o próximo acesso da mesma conta.
 

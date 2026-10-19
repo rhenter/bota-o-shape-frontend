@@ -13,7 +13,7 @@ The Yarn workspace contains only the admin dashboard. Flutter manages its depend
 
 ## Data modes
 
-The admin dashboard uses the API by default. Set `NEXT_PUBLIC_API_BASE_URL` in `apps/admin/.env.local` to change its public origin. `NEXT_PUBLIC_DATA_MODE=demo` enables fixtures only in development; production builds always require the API.
+The admin dashboard uses the API by default. Set `API_BASE_URL` in `apps/admin/.env.local` to change the server-side proxy destination. `NEXT_PUBLIC_DATA_MODE=demo` enables fixtures only in development; production builds always require the API.
 
 The student app requires an HTTPS `API_BASE_URL`. Local HTTP is limited to loopback or the Android emulator host and requires `ALLOW_INSECURE_LOCAL_API=true`. `STUDENT_DEMO=true` exposes a demo choice on the sign-in screen. Network or authorization errors never switch either client to demo data automatically.
 
@@ -33,7 +33,7 @@ The Flutter app supports invitation acceptance, authentication, tenant selection
 
 Real sessions use encrypted local storage for credentials, caches, drafts, and queues. Workout submissions keep one idempotency key across retries. Uncertain nutrition submissions are not replayed automatically because the current API does not provide idempotency for those endpoints. The student must reconcile uncertain records before sending again.
 
-The native Android and iOS runners are not committed yet. Generate them with `flutter create`, review the generated files, and validate secure storage and network configuration on real devices before release.
+The native Android and iOS runners are versioned. Review signing, secure storage, permissions, and network configuration on real devices before release.
 
 ## Current integration limits
 

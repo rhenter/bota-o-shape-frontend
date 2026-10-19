@@ -21,7 +21,7 @@ The implementation is an integration candidate. Check an item only when the targ
 - [ ] Configure HTTPS, CORS, allowed origins, and test accounts for multiple tenants. Keep secrets out of `NEXT_PUBLIC_*`, Dart defines, clients, and logs.
 - [ ] Run an end-to-end journey from invitation through workouts, synchronization, assessments, reports, nutrition, hydration, and consent changes, then verify server persistence and audit records.
 - [ ] Run `yarn test`, `yarn test:coverage`, `yarn lint`, and `yarn build` in the release environment.
-- [ ] Generate and review the Android and iOS runners, resolve Flutter dependencies, and run formatting, analysis, tests, and release builds.
+- [ ] Review the committed Android and iOS runners, signing, permissions, secure storage, and release configuration on real devices.
 - [ ] Configure `flutter_secure_storage`, including Android SDK requirements and backup exclusions plus the required iOS Keychain capabilities.
 - [ ] Test install, upgrade, storage failure, restart, account and tenant switching, sign-out, offline queues, ambiguous responses, and conflict recovery on real devices.
 - [ ] Test UTC and local dates around midnight and validate that release builds never enable demo mode implicitly.

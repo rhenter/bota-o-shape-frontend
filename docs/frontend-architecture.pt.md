@@ -6,7 +6,7 @@
 
 O workspace Yarn contém apenas `apps/admin`: Next.js 16, React 19 e TypeScript. `apps/student` é Flutter 3.47.7 nativo com Dart 3.13.5, independente do Yarn. Os comandos e variáveis estão no [README raiz](../README.pt.md) e no [README mobile](../apps/student/README.pt.md). Não há acesso direto dos clientes ao banco, segredos USDA, captura de cartão ou infraestrutura de pagamentos nos frontends.
 
-No web, o modo padrão é API; `NEXT_PUBLIC_API_BASE_URL` é uma origem pública. `NEXT_PUBLIC_DATA_MODE=demo` só é aceito fora de produção. No mobile, `API_BASE_URL` exige HTTPS; HTTP local requer `ALLOW_INSECURE_LOCAL_API=true`. `STUDENT_DEMO=true` apenas habilita a escolha explícita de demonstração. Falhas de rede/autorização nunca ativam fixtures. Conteúdo demo é fictício e recebe identificação visível. A logo original e os tokens marinho/lima estão preservados.
+No web, o modo padrão é API; `API_BASE_URL` define o destino do proxy no servidor Next.js. `NEXT_PUBLIC_DATA_MODE=demo` só é aceito fora de produção. No mobile, `API_BASE_URL` exige HTTPS; HTTP local requer `ALLOW_INSECURE_LOCAL_API=true`. `STUDENT_DEMO=true` apenas habilita a escolha explícita de demonstração. Falhas de rede/autorização nunca ativam fixtures. Conteúdo demo é fictício e recebe identificação visível. A logo original e os tokens marinho/lima estão preservados.
 
 ## Limites de responsabilidade
 

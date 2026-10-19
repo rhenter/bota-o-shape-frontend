@@ -88,51 +88,59 @@ git clone https://github.com/rhenter/bota-o-shape-frontend.git
 cd bota-o-shape-frontend
 ```
 
-### 2. Execute o painel administrativo em Next.js
+### 2. Prepare as aplicações
+
+Execute os demais comandos na raiz do repositório. O projeto possui um `Makefile`, então não é necessário memorizar os comandos internos do Yarn e do Flutter:
 
 ```bash
-corepack enable
-yarn install
-cp apps/admin/.env.example apps/admin/.env.local
-yarn dev
+make help
+make setup
 ```
 
-Acesse [http://localhost:3000](http://localhost:3000). O endereço padrão da API é `http://127.0.0.1:8000`; altere `NEXT_PUBLIC_API_BASE_URL` em `apps/admin/.env.local` quando necessário. Variáveis públicas nunca devem conter credenciais ou segredos.
+`run` inicia uma aplicação para uso local e mantém o processo em execução durante o desenvolvimento. `build` compila e otimiza uma aplicação para gerar os artefatos de produção; ele não inicia a aplicação. O setup confere os runners Android/iOS do Flutter, baixa as dependências e cria `apps/admin/.env.local` caso o arquivo ainda não exista.
+
+### 3. Execute o painel administrativo em Next.js
+
+```bash
+make portal-run
+```
+
+Acesse [http://localhost:3000](http://localhost:3000). O endereço padrão da API é `http://127.0.0.1:8006`; altere `API_BASE_URL` em `apps/admin/.env.local` quando necessário. O portal encaminha `/api/*` pelo servidor Next.js para que a autenticação local não dependa da configuração de CORS do navegador.
 
 Para usar dados locais de demonstração:
 
 ```bash
-NEXT_PUBLIC_DATA_MODE=demo yarn dev
+make portal-demo
 ```
 
-Verificações disponíveis:
+Para criar e executar um build otimizado de produção:
 
 ```bash
-yarn test
-yarn test:coverage
-yarn lint
-yarn build
+make portal-build
+make portal-start
 ```
 
-### 3. Execute o aplicativo Flutter
+Use `make portal-check` para executar o lint, a verificação de tipos e os testes.
 
-Os runners nativos são gerados localmente até serem versionados e validados:
+### 4. Execute o aplicativo Flutter
+
+Conecte um dispositivo Android/iOS ou inicie um emulador/simulador e execute:
 
 ```bash
-cd apps/student
-flutter create --platforms=android,ios --project-name bota_o_shape_student .
-flutter pub get
-dart format lib test
-flutter analyze
-flutter test
-flutter run --dart-define=API_BASE_URL=https://api.example.com/
+make student-run API_BASE_URL=https://api.example.com/
 ```
+
+Substitua a URL de exemplo pela URL pública da sua API. Os runners nativos Android e iOS estão incluídos no repositório; os comandos de build restauram o runner correspondente antes da compilação caso ele esteja ausente.
 
 Para exibir a opção explícita de demonstração:
 
 ```bash
-flutter run --dart-define=STUDENT_DEMO=true
+make student-demo
 ```
+
+Use `make student-check` para formatar, analisar e testar o app. Use `make student-build-android` para gerar um APK Android ou `make student-build-ios` para gerar um app de simulador iOS sem exigir uma equipe Apple Development. Informe `API_BASE_URL` nos comandos de build da mesma forma mostrada em `student-run`.
+
+O build iOS usa o Xcode em `/Applications/Xcode.app` por padrão. Selecione-o uma vez com `sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer`. Caso ele esteja instalado em outro local, informe `XCODE_DEVELOPER_DIR=/caminho/para/Xcode.app/Contents/Developer` ao executar `make student-build-ios`.
 
 Consulte o [guia do aplicativo do aluno](apps/student/README.pt.md) para configuração HTTP local, armazenamento seguro, sincronização e limitações nativas atuais.
 
@@ -156,6 +164,7 @@ Consulte o [guia do aplicativo do aluno](apps/student/README.pt.md) para configu
 │       ├── lib/
 │       └── test/
 ├── docs/                # Arquitetura e documentação de liberação
+├── Makefile             # Comandos de setup, execução, build e verificação
 ├── package.json         # Comandos do workspace Yarn
 └── yarn.lock            # Dependências web travadas
 ```

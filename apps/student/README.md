@@ -4,15 +4,14 @@
 
 Native Flutter application for Bota o Shape students on Android and iOS. Professionals and administrators use the web dashboard.
 
-The current development environment has Flutter 3.47.7 and Dart 3.13.5. Formatting, static analysis, and 57 tests pass. Android release builds still require the Android SDK, while iOS builds require a complete Xcode installation and CocoaPods.
+The current development environment has Flutter 3.47.7 and Dart 3.13.5. Formatting, static analysis, and 58 tests pass. Android release builds still require the Android SDK, while iOS builds require a complete Xcode installation and CocoaPods. Both native runners are included in the repository.
 
 ## Run locally
 
-Use Flutter 3.47.7 with Dart 3.13.5. The native runners are not committed yet, so generate and review them before the first run:
+Use Flutter 3.47.7 with Dart 3.13.5:
 
 ```bash
 cd apps/student
-flutter create --platforms=ios,android --project-name bota_o_shape_student .
 flutter pub get
 dart format lib test
 flutter analyze
@@ -73,7 +72,7 @@ The current nutrition POST endpoints do not accept idempotency keys. Local inten
 
 ## Current limitations
 
-- Android and iOS runners, signing, permissions, and release builds still require device validation.
+- Android and iOS signing, permissions, and release builds still require device validation.
 - Exercise media and variants are not exposed by the current API router, so the app uses text fallbacks.
 - The backend does not expose planned dates for individual workout sessions.
 - Some nutrition authorship, composition, and immutable historical snapshot fields are absent from student serializers.

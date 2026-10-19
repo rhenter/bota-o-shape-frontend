@@ -13,7 +13,7 @@ O workspace Yarn contém somente o painel administrativo. O Flutter gerencia sua
 
 ## Modos de dados
 
-O painel usa a API por padrão. Configure `NEXT_PUBLIC_API_BASE_URL` em `apps/admin/.env.local` para alterar sua origem pública. `NEXT_PUBLIC_DATA_MODE=demo` habilita fixtures somente em desenvolvimento; builds de produção sempre exigem a API.
+O painel usa a API por padrão. Configure `API_BASE_URL` em `apps/admin/.env.local` para alterar o destino do proxy no servidor. `NEXT_PUBLIC_DATA_MODE=demo` habilita fixtures somente em desenvolvimento; builds de produção sempre exigem a API.
 
 O aplicativo do aluno exige uma `API_BASE_URL` HTTPS. HTTP local é limitado ao loopback ou host do emulador Android e exige `ALLOW_INSECURE_LOCAL_API=true`. `STUDENT_DEMO=true` exibe uma opção de demonstração na tela de entrada. Falhas de rede ou autorização nunca mudam qualquer cliente para dados demo automaticamente.
 
@@ -33,7 +33,7 @@ O aplicativo Flutter cobre aceite de convite, autenticação, seleção de acade
 
 Sessões reais usam armazenamento local criptografado para credenciais, caches, rascunhos e filas. Envios de treino mantêm uma chave de idempotência entre tentativas. Envios nutricionais incertos não são repetidos automaticamente porque a API atual não oferece idempotência nesses endpoints. O aluno deve reconciliar registros incertos antes de enviar novamente.
 
-Os runners nativos Android e iOS ainda não estão versionados. Gere-os com `flutter create`, revise os arquivos gerados e valide o armazenamento seguro e a rede em dispositivos reais antes da liberação.
+Os runners nativos Android e iOS estão versionados. Revise assinatura, armazenamento seguro, permissões e rede em dispositivos reais antes da liberação.
 
 ## Limitações atuais de integração
 

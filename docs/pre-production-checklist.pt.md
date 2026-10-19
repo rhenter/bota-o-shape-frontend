@@ -19,7 +19,7 @@ A implementação é candidata à integração, não uma liberação para dados 
 - [ ] Configurar API HTTPS/CORS, origens e contas de teste por tenant. Nenhum segredo em `NEXT_PUBLIC_*`, Dart defines, cliente ou logs. Validar expiração, refresh rotativo, logout/revogação e tenant alterado durante uma requisição.
 - [ ] Executar jornada real: convite/aceite → login/tenant → criar/revisar/publicar/atribuir treino → execução/offline/restart/sincronização → avaliação/revisão/conclusão/liberação → relatório próprio → nutrição/diário/água/check-in. Confirmar persistência no servidor e auditoria.
 - [ ] Executar `yarn test`, `yarn lint`, `yarn build` no ambiente final. A verificação local da Task 7 usa mocks e não substitui testes reais de API.
-- [ ] Gerar e revisar os runners iOS/Android e executar os builds de release. Dependências, lockfile, formatação, análise e testes Flutter já foram validados; builds Android ainda exigem o Android SDK, e builds iOS exigem Xcode completo e CocoaPods.
+- [ ] Revisar os runners iOS/Android versionados, assinatura, permissões, armazenamento seguro e configuração de release em dispositivos reais.
 - [ ] Configurar `flutter_secure_storage` 11.2.0: Android minSdk >=23, backup desabilitado/exclusões e Keychain iOS. Testar instalação/upgrade, storage indisponível, reinício, troca de conta/tenant e logout. Não substituir cache sensível por texto simples.
 - [ ] Em dispositivos pequenos iOS/Android, testar teclado, rotação, retorno do background e deadline de descanso; filas após resposta perdida/crash, conflito/idempotência e reconciliação nutricional sem duplicar registros. Testar datas UTC/local e vigências perto da meia-noite.
 - [ ] Confirmar que builds reais não apresentam demo implicitamente. Revisar dados fictícios, nenhuma credencial fixa de produção e nenhum endpoint inventado.
@@ -35,6 +35,6 @@ A implementação é candidata à integração, não uma liberação para dados 
 
 ## Evidência local da integração final
 
-Em 17/10/2026: a suíte web passou com 91 testes em 17 arquivos; lint (ESLint e TypeScript) passou; o build gerou todas as rotas. No mobile, Flutter 3.47.7/Dart 3.13.5 formataram os 33 arquivos, a análise terminou sem problemas e os 57 testes passaram com 53,15% de cobertura de linhas. A análise de integração verificou 57 caminhos/77 operações OpenAPI e os destinos literais das 26 rotas web. Os builds nativos ainda não foram executados.
+Em 19/10/2026: a suíte web passou com 91 testes em 17 arquivos; lint (ESLint e TypeScript) passou; o build gerou todas as rotas. No mobile, Flutter 3.47.7/Dart 3.13.5 formataram os 34 arquivos, a análise terminou sem problemas e os 58 testes passaram. Os builds do APK Android release e do app iOS para simulador foram concluídos. A análise de integração anterior verificou 57 caminhos/77 operações OpenAPI e os destinos literais das 26 rotas web.
 
 A navegação demo percorreu as 25 páginas de conteúdo em 390 e 1440 px, incluindo detalhes dinâmicos, sem overflow horizontal da página. O menu mobile foi verificado com Tab/Shift+Tab/Escape e retorno de foco; links/botões visíveis respeitaram 44 px. Isso não substitui a jornada real, leitores de tela ou testes de dispositivo acima.
