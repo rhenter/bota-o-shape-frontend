@@ -91,6 +91,9 @@ interface Page<T> {
   results: T[];
 }
 
+const portalOrigin = () =>
+  typeof window === "undefined" ? "" : window.location.origin;
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -107,8 +110,7 @@ export class ApiClient {
   private refreshing: { generation: number; promise: Promise<void> } | null = null;
   private sessionListeners = new Set<(authenticated: boolean) => void>();
   constructor(
-    private baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ??
-      "http://127.0.0.1:8000",
+    private baseUrl = portalOrigin(),
     private fetcher: typeof fetch = (...args) => fetch(...args),
   ) {}
   get authenticated() {
@@ -278,9 +280,11 @@ export class ApiClient {
       items.push(...page.results);
       // Never send Authorization to an origin supplied by a pagination response.
       if (page.next) {
-        const url: URL = new URL(page.next, this.baseUrl);
+        const proxyOrigin = "http://portal.local";
+        const url: URL = new URL(page.next, this.baseUrl || proxyOrigin);
+        const usesPortalProxy = !this.baseUrl || this.baseUrl === portalOrigin();
         if (
-          url.origin !== new URL(this.baseUrl).origin ||
+          (!usesPortalProxy && url.origin !== new URL(this.baseUrl).origin) ||
           !url.pathname.startsWith("/api/")
         )
           throw new ApiError(
