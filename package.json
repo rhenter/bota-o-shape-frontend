@@ -3,7 +3,8 @@
   "private": true,
   "packageManager": "yarn@4.4.1",
   "workspaces": [
-    "apps/gym_admin"
+    "apps/gym_admin",
+    "apps/portal"
   ],
   "engines": {
     "node": ">=24.15.0 <25"
@@ -14,6 +15,7 @@
     "start": "yarn workspace @bota-o-shape/gym-admin start",
     "lint": "yarn workspace @bota-o-shape/gym-admin lint",
     "test": "yarn workspace @bota-o-shape/gym-admin test",
+    "portal:dev": "yarn workspace @bota-o-shape/portal dev",
     "test:coverage": "yarn workspace @bota-o-shape/gym-admin test:coverage"
   }
 }

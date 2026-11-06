@@ -4,12 +4,13 @@
 
 ## Applications
 
-The repository contains two independent clients:
+The repository contains these clients:
 
 - `apps/gym_admin`: a Next.js dashboard for owners, administrators, trainers, and nutritionists.
+- `apps/portal`: a public Next.js site for the commercial landing page, plans, signup, and academy hosts.
 - `apps/student`: a Flutter app for students on Android and iOS.
 
-The Yarn workspace contains only the admin dashboard. Flutter manages its dependencies separately. Both clients consume the sibling `bota-o-shape-api` project and keep authorization decisions on the server.
+The Yarn workspace contains the academy dashboard and the commercial portal. Flutter manages its dependencies separately. The clients consume the sibling `bota-o-shape-api` project and keep authorization decisions on the server.
 
 ## Data modes
 

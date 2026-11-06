@@ -159,6 +159,7 @@ See the [student app guide](apps/student/README.md) for local HTTP configuration
 │   │       ├── components/
 │   │       ├── lib/     # API, domain, and authorization logic
 │   │       └── test/    # Shared test setup
+│   ├── portal/          # Commercial site and academy hosts
 │   └── student/         # Flutter student application
 │       ├── assets/
 │       ├── lib/

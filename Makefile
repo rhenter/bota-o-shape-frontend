@@ -1,7 +1,7 @@
 API_BASE_URL ?= http://127.0.0.1:8006/
 XCODE_DEVELOPER_DIR ?= /Applications/Xcode.app/Contents/Developer
 
-.PHONY: help setup portal-setup portal-run portal-demo portal-build portal-start portal-check \
+.PHONY: help setup portal-setup portal-run portal-demo portal-build portal-start portal-check portal-saas-run portal-saas-build portal-saas-check \
 	student-setup student-ensure-android student-ensure-ios student-ensure-xcode student-run student-demo \
 	student-build-android student-build-ios student-check
 
@@ -13,6 +13,8 @@ help:
 	@echo "  make portal-build           Create the portal production build"
 	@echo "  make portal-start           Run the previously built portal"
 	@echo "  make portal-check           Run portal lint and tests"
+	@echo "  make portal-saas-run               Run the commercial portal (landing, plans, signup) on :3001"
+	@echo "  make portal-saas-check             Run commercial portal lint and tests"
 	@echo "  make student-run            Run the Flutter app"
 	@echo "  make student-demo           Run the Flutter app with demo data enabled"
 	@echo "  make student-build-android  Create the Android APK"
@@ -46,6 +48,16 @@ portal-start:
 portal-check:
 	yarn lint
 	yarn test
+
+portal-saas-run:
+	API_BASE_URL="$(API_BASE_URL)" yarn portal:dev
+
+portal-saas-build:
+	API_BASE_URL="$(API_BASE_URL)" yarn workspace @bota-o-shape/portal build
+
+portal-saas-check:
+	yarn workspace @bota-o-shape/portal lint
+	yarn workspace @bota-o-shape/portal test
 
 student-setup: student-ensure-android student-ensure-ios
 	cd apps/student && flutter pub get
