@@ -6,14 +6,14 @@
 
 O repositório contém dois clientes independentes:
 
-- `apps/admin`: painel Next.js para proprietários, administradores, professores e nutricionistas.
+- `apps/gym_admin`: painel Next.js para proprietários, administradores, professores e nutricionistas.
 - `apps/student`: aplicativo Flutter para alunos em Android e iOS.
 
 O workspace Yarn contém somente o painel administrativo. O Flutter gerencia suas dependências separadamente. Os dois clientes consomem o projeto irmão `bota-o-shape-api` e mantêm as decisões de autorização no servidor.
 
 ## Modos de dados
 
-O painel usa a API por padrão. Configure `API_BASE_URL` em `apps/admin/.env.local` para alterar o destino do proxy no servidor. `NEXT_PUBLIC_DATA_MODE=demo` habilita fixtures somente em desenvolvimento; builds de produção sempre exigem a API.
+O painel usa a API por padrão. Configure `API_BASE_URL` em `apps/gym_admin/.env.local` para alterar o destino do proxy no servidor. `NEXT_PUBLIC_DATA_MODE=demo` habilita fixtures somente em desenvolvimento; builds de produção sempre exigem a API.
 
 O aplicativo do aluno exige uma `API_BASE_URL` HTTPS. HTTP local é limitado ao loopback ou host do emulador Android e exige `ALLOW_INSECURE_LOCAL_API=true`. `STUDENT_DEMO=true` exibe uma opção de demonstração na tela de entrada. Falhas de rede ou autorização nunca mudam qualquer cliente para dados demo automaticamente.
 

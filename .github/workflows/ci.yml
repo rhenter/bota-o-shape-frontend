@@ -39,7 +39,7 @@ jobs:
       - name: Prepare coverage summary
         run: |
           mkdir -p coverage
-          cp apps/admin/coverage/coverage-summary.json coverage/coverage-summary.json
+          cp apps/gym_admin/coverage/coverage-summary.json coverage/coverage-summary.json
 
       - name: Run lint and type checks
         run: yarn lint

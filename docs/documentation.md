@@ -6,14 +6,14 @@
 
 The repository contains two independent clients:
 
-- `apps/admin`: a Next.js dashboard for owners, administrators, trainers, and nutritionists.
+- `apps/gym_admin`: a Next.js dashboard for owners, administrators, trainers, and nutritionists.
 - `apps/student`: a Flutter app for students on Android and iOS.
 
 The Yarn workspace contains only the admin dashboard. Flutter manages its dependencies separately. Both clients consume the sibling `bota-o-shape-api` project and keep authorization decisions on the server.
 
 ## Data modes
 
-The admin dashboard uses the API by default. Set `API_BASE_URL` in `apps/admin/.env.local` to change the server-side proxy destination. `NEXT_PUBLIC_DATA_MODE=demo` enables fixtures only in development; production builds always require the API.
+The admin dashboard uses the API by default. Set `API_BASE_URL` in `apps/gym_admin/.env.local` to change the server-side proxy destination. `NEXT_PUBLIC_DATA_MODE=demo` enables fixtures only in development; production builds always require the API.
 
 The student app requires an HTTPS `API_BASE_URL`. Local HTTP is limited to loopback or the Android emulator host and requires `ALLOW_INSECURE_LOCAL_API=true`. `STUDENT_DEMO=true` exposes a demo choice on the sign-in screen. Network or authorization errors never switch either client to demo data automatically.
 

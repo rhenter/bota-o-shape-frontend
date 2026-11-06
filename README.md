@@ -7,7 +7,7 @@
   <a href="https://react.dev/"><img alt="React 19.3.1" src="https://img.shields.io/badge/react-19.3.1-61DAFB?logo=react&logoColor=black" /></a>
   <a href="https://flutter.dev/"><img alt="Flutter 3.47.7" src="https://img.shields.io/badge/flutter-3.47.7-02569B?logo=flutter&logoColor=white" /></a>
   <a href="LICENSE"><img alt="Proprietary license" src="https://img.shields.io/badge/license-proprietary-red.svg" /></a>
-  <a href="apps/admin/package.json"><img alt="Project version 0.1.0" src="https://img.shields.io/badge/version-0.1.0-blue.svg" /></a>
+  <a href="apps/gym_admin/package.json"><img alt="Project version 0.1.0" src="https://img.shields.io/badge/version-0.1.0-blue.svg" /></a>
 </p>
 
 <p align="center">
@@ -97,7 +97,7 @@ make help
 make setup
 ```
 
-`run` starts an application for local use and keeps the process running while you develop. `build` compiles and optimizes an application into production artifacts; it does not start the application. Setup checks the Flutter Android/iOS runners, downloads dependencies, and creates `apps/admin/.env.local` when it does not exist.
+`run` starts an application for local use and keeps the process running while you develop. `build` compiles and optimizes an application into production artifacts; it does not start the application. Setup checks the Flutter Android/iOS runners, downloads dependencies, and creates `apps/gym_admin/.env.local` when it does not exist.
 
 ### 3. Run the Next.js admin dashboard
 
@@ -105,7 +105,7 @@ make setup
 make portal-run
 ```
 
-Open [http://localhost:3000](http://localhost:3000). The default API address is `http://127.0.0.1:8006`; change `API_BASE_URL` in `apps/admin/.env.local` when necessary. The portal sends `/api/*` through the Next.js server so local authentication does not depend on browser CORS configuration.
+Open [http://localhost:3000](http://localhost:3000). The default API address is `http://127.0.0.1:8006`; change `API_BASE_URL` in `apps/gym_admin/.env.local` when necessary. The portal sends `/api/*` through the Next.js server so local authentication does not depend on browser CORS configuration.
 
 To use local demo data:
 
@@ -152,7 +152,7 @@ See the [student app guide](apps/student/README.md) for local HTTP configuration
 .
 ├── .github/workflows/   # Continuous integration
 ├── apps/
-│   ├── admin/           # Next.js professional dashboard
+│   ├── gym_admin/       # Next.js professional dashboard
 │   │   ├── public/      # Static assets
 │   │   └── src/
 │   │       ├── app/     # App Router pages and layouts

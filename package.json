@@ -3,17 +3,17 @@
   "private": true,
   "packageManager": "yarn@4.4.1",
   "workspaces": [
-    "apps/admin"
+    "apps/gym_admin"
   ],
   "engines": {
     "node": ">=24.15.0 <25"
   },
   "scripts": {
-    "dev": "yarn workspace @bota-o-shape/admin dev",
-    "build": "yarn workspace @bota-o-shape/admin build",
-    "start": "yarn workspace @bota-o-shape/admin start",
-    "lint": "yarn workspace @bota-o-shape/admin lint",
-    "test": "yarn workspace @bota-o-shape/admin test",
-    "test:coverage": "yarn workspace @bota-o-shape/admin test:coverage"
+    "dev": "yarn workspace @bota-o-shape/gym-admin dev",
+    "build": "yarn workspace @bota-o-shape/gym-admin build",
+    "start": "yarn workspace @bota-o-shape/gym-admin start",
+    "lint": "yarn workspace @bota-o-shape/gym-admin lint",
+    "test": "yarn workspace @bota-o-shape/gym-admin test",
+    "test:coverage": "yarn workspace @bota-o-shape/gym-admin test:coverage"
   }
 }

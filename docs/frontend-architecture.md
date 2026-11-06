@@ -4,7 +4,7 @@
 
 ## Applications and runtime
 
-The Yarn workspace contains `apps/admin`, a Next.js 16, React 19, and TypeScript dashboard. `apps/student` is an independent native Flutter 3.47.7 application with Dart 3.13.5. Neither client connects directly to a database or contains backend secrets.
+The Yarn workspace contains `apps/gym_admin`, a Next.js 16, React 19, and TypeScript dashboard. `apps/student` is an independent native Flutter 3.47.7 application with Dart 3.13.5. Neither client connects directly to a database or contains backend secrets.
 
 The web client uses the API by default and accepts an explicit development-only demo mode. The mobile client requires HTTPS for normal API use and exposes demo mode only through a build define. Failures never activate fixtures automatically.
 
@@ -12,8 +12,8 @@ The web client uses the API by default and accepts an explicit development-only 
 
 | Area | Responsibility |
 | --- | --- |
-| `admin/src/lib/api-client.ts` and contract modules | HTTP transport, JWT rotation and revocation, tenant headers, pagination, and backend DTOs. |
-| `admin/src/components/app-context.tsx` | In-memory session, active tenant, memberships, catalogs, and stale-response invalidation. |
+| `gym_admin/src/lib/api-client.ts` and contract modules | HTTP transport, JWT rotation and revocation, tenant headers, pagination, and backend DTOs. |
+| `gym_admin/src/components/app-context.tsx` | In-memory session, active tenant, memberships, catalogs, and stale-response invalidation. |
 | Admin data hooks | Scoped reads, loading, errors, retries, and operational commands. |
 | Admin domain modules | Presentation models and explicit permission, assessment, and nutrition rules. |
 | Admin demo repository | Fictional fixtures isolated by user and tenant. |

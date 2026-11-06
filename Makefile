@@ -29,7 +29,7 @@ setup: portal-setup student-setup
 portal-setup:
 	corepack enable
 	yarn install
-	@test -f apps/admin/.env.local || cp apps/admin/.env.example apps/admin/.env.local
+	@test -f apps/gym_admin/.env.local || cp apps/gym_admin/.env.example apps/gym_admin/.env.local
 
 portal-run:
 	API_BASE_URL="$(API_BASE_URL)" yarn dev

@@ -226,9 +226,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@bota-o-shape/admin@workspace:apps/admin":
+"@bota-o-shape/gym-admin@workspace:apps/gym_admin":
   version: 0.0.0-use.local
-  resolution: "@bota-o-shape/admin@workspace:apps/admin"
+  resolution: "@bota-o-shape/gym-admin@workspace:apps/gym_admin"
   dependencies:
     "@testing-library/dom": "npm:^10.4.1"
     "@testing-library/jest-dom": "npm:^6.9.1"

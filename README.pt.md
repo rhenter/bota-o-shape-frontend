@@ -7,7 +7,7 @@
   <a href="https://react.dev/"><img alt="React 19.3.1" src="https://img.shields.io/badge/react-19.3.1-61DAFB?logo=react&logoColor=black" /></a>
   <a href="https://flutter.dev/"><img alt="Flutter 3.47.7" src="https://img.shields.io/badge/flutter-3.47.7-02569B?logo=flutter&logoColor=white" /></a>
   <a href="LICENSE"><img alt="Licença proprietária" src="https://img.shields.io/badge/license-proprietary-red.svg" /></a>
-  <a href="apps/admin/package.json"><img alt="Versão do projeto 0.1.0" src="https://img.shields.io/badge/version-0.1.0-blue.svg" /></a>
+  <a href="apps/gym_admin/package.json"><img alt="Versão do projeto 0.1.0" src="https://img.shields.io/badge/version-0.1.0-blue.svg" /></a>
 </p>
 
 <p align="center">
@@ -97,7 +97,7 @@ make help
 make setup
 ```
 
-`run` inicia uma aplicação para uso local e mantém o processo em execução durante o desenvolvimento. `build` compila e otimiza uma aplicação para gerar os artefatos de produção; ele não inicia a aplicação. O setup confere os runners Android/iOS do Flutter, baixa as dependências e cria `apps/admin/.env.local` caso o arquivo ainda não exista.
+`run` inicia uma aplicação para uso local e mantém o processo em execução durante o desenvolvimento. `build` compila e otimiza uma aplicação para gerar os artefatos de produção; ele não inicia a aplicação. O setup confere os runners Android/iOS do Flutter, baixa as dependências e cria `apps/gym_admin/.env.local` caso o arquivo ainda não exista.
 
 ### 3. Execute o painel administrativo em Next.js
 
@@ -105,7 +105,7 @@ make setup
 make portal-run
 ```
 
-Acesse [http://localhost:3000](http://localhost:3000). O endereço padrão da API é `http://127.0.0.1:8006`; altere `API_BASE_URL` em `apps/admin/.env.local` quando necessário. O portal encaminha `/api/*` pelo servidor Next.js para que a autenticação local não dependa da configuração de CORS do navegador.
+Acesse [http://localhost:3000](http://localhost:3000). O endereço padrão da API é `http://127.0.0.1:8006`; altere `API_BASE_URL` em `apps/gym_admin/.env.local` quando necessário. O portal encaminha `/api/*` pelo servidor Next.js para que a autenticação local não dependa da configuração de CORS do navegador.
 
 Para usar dados locais de demonstração:
 
@@ -152,7 +152,7 @@ Consulte o [guia do aplicativo do aluno](apps/student/README.pt.md) para configu
 .
 ├── .github/workflows/   # Integração contínua
 ├── apps/
-│   ├── admin/           # Painel profissional em Next.js
+│   ├── gym_admin/       # Painel profissional em Next.js
 │   │   ├── public/      # Arquivos estáticos
 │   │   └── src/
 │   │       ├── app/     # Páginas e layouts do App Router

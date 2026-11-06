@@ -4,7 +4,7 @@
 
 ## Aplicações e execução
 
-O workspace Yarn contém apenas `apps/admin`: Next.js 16, React 19 e TypeScript. `apps/student` é Flutter 3.47.7 nativo com Dart 3.13.5, independente do Yarn. Os comandos e variáveis estão no [README raiz](../README.pt.md) e no [README mobile](../apps/student/README.pt.md). Não há acesso direto dos clientes ao banco, segredos USDA, captura de cartão ou infraestrutura de pagamentos nos frontends.
+O workspace Yarn contém apenas `apps/gym_admin`: Next.js 16, React 19 e TypeScript. `apps/student` é Flutter 3.47.7 nativo com Dart 3.13.5, independente do Yarn. Os comandos e variáveis estão no [README raiz](../README.pt.md) e no [README mobile](../apps/student/README.pt.md). Não há acesso direto dos clientes ao banco, segredos USDA, captura de cartão ou infraestrutura de pagamentos nos frontends.
 
 No web, o modo padrão é API; `API_BASE_URL` define o destino do proxy no servidor Next.js. `NEXT_PUBLIC_DATA_MODE=demo` só é aceito fora de produção. No mobile, `API_BASE_URL` exige HTTPS; HTTP local requer `ALLOW_INSECURE_LOCAL_API=true`. `STUDENT_DEMO=true` apenas habilita a escolha explícita de demonstração. Falhas de rede/autorização nunca ativam fixtures. Conteúdo demo é fictício e recebe identificação visível. A logo original e os tokens marinho/lima estão preservados.
 
@@ -12,8 +12,8 @@ No web, o modo padrão é API; `API_BASE_URL` define o destino do proxy no servi
 
 | Camada | Responsabilidade |
 | --- | --- |
-| `admin/src/lib/api-client.ts`, `admin-contracts.ts`, `training-contracts.ts` | Transporte, JWT/refresh/revogação, `X-Tenant-ID`, paginação da mesma origem e DTOs do backend. |
-| `admin/src/components/app-context.tsx` | Sessão em memória, academia ativa, memberships, projeção dos catálogos e invalidação ao sair/expirar/trocar tenant. |
+| `gym_admin/src/lib/api-client.ts`, `admin-contracts.ts`, `training-contracts.ts` | Transporte, JWT/refresh/revogação, `X-Tenant-ID`, paginação da mesma origem e DTOs do backend. |
+| `gym_admin/src/components/app-context.tsx` | Sessão em memória, academia ativa, memberships, projeção dos catálogos e invalidação ao sair/expirar/trocar tenant. |
 | `use-training-data.ts`, `use-admin-data.ts` | Leituras por escopo, loading/erro/retry, controles operacionais e nutrição. Respostas antigas não entram no tenant novo. |
 | `domain.ts`, `permissions.ts`, `assessments.ts`, `nutrition.ts` | Modelos de apresentação e regras explícitas de interface, comparação e cálculo descritivo. |
 | `demo-data.ts`, `demo-repository.ts` | Fixtures e leituras isoladas por usuário/academia; sem autenticação, envio ou persistência real. |
