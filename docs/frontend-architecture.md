@@ -4,7 +4,7 @@
 
 ## Applications and runtime
 
-The Yarn workspace contains `apps/gym_admin` and `apps/portal`, Next.js 16, React 19, and TypeScript applications. `apps/student` is an independent native Flutter 3.47.7 application with Dart 3.13.5. None of the clients connect directly to a database or contain backend secrets.
+The Yarn workspace contains `apps/gym_admin`, `apps/portal`, and `apps/saas_admin`, Next.js 16, React 19, and TypeScript applications. `apps/student` is an independent native Flutter 3.47.7 application with Dart 3.13.5. None of the clients connect directly to a database or contain backend secrets.
 
 The web client uses the API by default and accepts an explicit development-only demo mode. The mobile client requires HTTPS for normal API use and exposes demo mode only through a build define. Failures never activate fixtures automatically.
 

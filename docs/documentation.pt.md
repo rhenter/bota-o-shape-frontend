@@ -8,9 +8,10 @@ O repositório contém estes clientes:
 
 - `apps/gym_admin`: painel Next.js para proprietários, administradores, professores e nutricionistas.
 - `apps/portal`: site público em Next.js para a página comercial, planos, cadastro e domínios de academia.
+- `apps/saas_admin`: console Next.js para operadores da plataforma.
 - `apps/student`: aplicativo Flutter para alunos em Android e iOS.
 
-O workspace Yarn contém o painel da academia e o portal comercial. O Flutter gerencia suas dependências separadamente. Os clientes consomem o projeto irmão `bota-o-shape-api` e mantêm as decisões de autorização no servidor.
+O workspace Yarn contém os três aplicativos Next.js. O Flutter gerencia suas dependências separadamente. Os clientes consomem o projeto irmão `bota-o-shape-api` e mantêm as decisões de autorização no servidor.
 
 ## Modos de dados
 

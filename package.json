@@ -4,7 +4,8 @@
   "packageManager": "yarn@4.4.1",
   "workspaces": [
     "apps/gym_admin",
-    "apps/portal"
+    "apps/portal",
+    "apps/saas_admin"
   ],
   "engines": {
     "node": ">=24.15.0 <25"
@@ -16,6 +17,10 @@
     "lint": "yarn workspace @bota-o-shape/gym-admin lint",
     "test": "yarn workspace @bota-o-shape/gym-admin test",
     "portal:dev": "yarn workspace @bota-o-shape/portal dev",
+    "saas:dev": "yarn workspace @bota-o-shape/saas-admin dev",
+    "saas:build": "yarn workspace @bota-o-shape/saas-admin build",
+    "saas:lint": "yarn workspace @bota-o-shape/saas-admin lint",
+    "saas:test": "yarn workspace @bota-o-shape/saas-admin test",
     "test:coverage": "yarn workspace @bota-o-shape/gym-admin test:coverage"
   }
 }

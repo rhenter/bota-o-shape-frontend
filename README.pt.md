@@ -160,6 +160,7 @@ Consulte o [guia do aplicativo do aluno](apps/student/README.pt.md) para configu
 │   │       ├── lib/     # API, domínio e autorização
 │   │       └── test/    # Configuração compartilhada de testes
 │   ├── portal/          # Site comercial e páginas da academia
+│   ├── saas_admin/      # Console dos operadores da plataforma
 │   └── student/         # Aplicativo Flutter do aluno
 │       ├── assets/
 │       ├── lib/
