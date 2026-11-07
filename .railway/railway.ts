@@ -48,9 +48,11 @@ export default defineRailway((ctx) => {
     env: {
       APP_NAME: "portal",
       API_BASE_URL: apiBaseUrl,
-      NEXT_PUBLIC_ADMIN_URL: "https://painel.botaoshape.com.br",
+      NEXT_PUBLIC_ADMIN_URL: "https://botaoshape.com.br/admin",
       NEXT_PUBLIC_SITE_URL: "https://botaoshape.com.br",
       PORTAL_HOSTS: "botaoshape.com.br,www.botaoshape.com.br",
+      // Private address of gym_admin. Resolved by Railway before the portal build.
+      GYM_ADMIN_ORIGIN: "http://${{gym_admin.RAILWAY_PRIVATE_DOMAIN}}:${{gym_admin.PORT}}",
     },
   });
 
@@ -60,9 +62,15 @@ export default defineRailway((ctx) => {
       ...common.build,
       watchPatterns: ["/apps/gym_admin/**", ...commonWatchPatterns],
     },
+    deploy: {
+      ...common.deploy,
+      // basePath moves this route off the container root. Railway calls the container directly.
+      healthcheckPath: "/admin/health",
+    },
     env: {
       APP_NAME: "gym_admin",
       API_BASE_URL: apiBaseUrl,
+      NEXT_PUBLIC_BASE_PATH: "/admin",
     },
   });
 

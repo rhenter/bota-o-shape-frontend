@@ -197,7 +197,7 @@ See the [student app guide](apps/student/README.md) for local HTTP configuration
 
 ## Deploy
 
-The web apps deploy to Railway from [`.railway/railway.ts`](.railway/railway.ts) as three services: `portal`, `gym_admin`, and `saas_admin`. Each service builds only its workspace and runs `next start`. The intended hosts are `botaoshape.com.br` for the portal, `painel.botaoshape.com.br` for the gym dashboard, and `admin.botaoshape.com.br` for the platform console. Details are in [`.railway/README.md`](.railway/README.md). The Flutter student app is not part of that deploy.
+The web apps deploy to Railway from [`.railway/railway.ts`](.railway/railway.ts) as three services. `portal` serves `botaoshape.com.br` and `www.botaoshape.com.br`: the commercial site at `/`, an academy landing at `/{academy-name}`, and the same landing on an academy custom domain. `gym_admin` has no public domain; the portal proxies `/admin` to it. `saas_admin` is `admin.botaoshape.com.br`. Details are in [`.railway/README.md`](.railway/README.md). The Flutter student app is not part of that deploy.
 
 ---
 

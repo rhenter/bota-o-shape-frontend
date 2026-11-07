@@ -9,6 +9,8 @@ describe("customDomainRewrite", () => {
     expect(customDomainRewrite("www.botaoshape.com.br", "/", hosts)).toBeNull();
     expect(customDomainRewrite("www.botaoshape.com.br", "/academia-exemplo", hosts)).toBeNull();
     expect(customDomainRewrite("localhost:3001", "/", hosts)).toBeNull();
+    expect(customDomainRewrite("portal-production.up.railway.app", "/", hosts)).toBeNull();
+    expect(customDomainRewrite("portal-production.up.railway.app", "/academia-exemplo", hosts)).toBeNull();
   });
   it("serves the landing for a custom domain root", () => {
     expect(customDomainRewrite("Gym.com:443", "/", hosts)).toBe("/host-landing/gym.com");

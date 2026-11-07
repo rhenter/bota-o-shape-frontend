@@ -7,10 +7,14 @@ export function portalHosts(env = process.env.PORTAL_HOSTS): Set<string> {
   return new Set(["localhost", "127.0.0.1", ...(env ?? "").split(",").map(hostOf).filter(Boolean)]);
 }
 
+function isPortalHost(host: string, hosts: Set<string>): boolean {
+  return hosts.has(host) || host.endsWith(".up.railway.app");
+}
+
 /** Path to rewrite to for a custom-domain request, or null to pass through. */
 export function customDomainRewrite(host: string, pathname: string, hosts = portalHosts()): string | null {
   const clean = hostOf(host);
-  if (!clean || hosts.has(clean)) return null;
+  if (!clean || isPortalHost(clean, hosts)) return null;
   // Only the landing root is branded; internal routes and assets (/_next, /api, files) are untouched.
   return pathname === "/" ? `/host-landing/${encodeURIComponent(clean)}` : null;
 }
