@@ -24,7 +24,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const [locale, messages] = await Promise.all([getLocale(), getMessages()]);
   return (
     <html lang={locale}>
-      <body>
+      <body suppressHydrationWarning>
         <I18nProvider messages={messages}>{children}</I18nProvider>
       </body>
     </html>
