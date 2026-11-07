@@ -1,6 +1,7 @@
 "use client";
 
 import { type FormEvent, useEffect, useState } from "react";
+import { useMessages } from "@/i18n/provider";
 import { ADMIN_URL, type RegistrationErrors, registerOwner } from "@/lib/api";
 
 const NO_ERRORS: RegistrationErrors = { fields: {}, general: [] };
@@ -38,6 +39,7 @@ function Field({ label, name, errors, ...props }: { label: string; name: string;
 }
 
 export function SignupForm({ planCode }: { planCode?: string }) {
+  const { signup, errors: errorsCopy } = useMessages();
   const [errors, setErrors] = useState<RegistrationErrors>(NO_ERRORS);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
@@ -70,7 +72,7 @@ export function SignupForm({ planCode }: { planCode?: string }) {
       email: value("email"),
       password: String(form.get("password") ?? ""),
       ...(planCode ? { plan_code: planCode } : {}),
-    });
+    }, fetch, errorsCopy);
     setBusy(false);
     if (result) setErrors(result);
     else setDone(true);
@@ -79,11 +81,9 @@ export function SignupForm({ planCode }: { planCode?: string }) {
   if (done) {
     return (
       <div className="card ok" role="status">
-        <h3>Conta criada!</h3>
-        <p>
-          Sua conta foi cadastrada{planCode === "pro" ? " no plano Pro" : " no plano piloto"}. Redirecionando para o painel…
-        </p>
-        <a className="btn" href={panelUrl}>Acessar o painel</a>
+        <h3>{signup.created}</h3>
+        <p>{planCode === "pro" ? signup.createdPro : signup.createdPilot}</p>
+        <a className="btn" href={panelUrl}>{signup.openPanel}</a>
       </div>
     );
   }
@@ -95,7 +95,7 @@ export function SignupForm({ planCode }: { planCode?: string }) {
         <div className="error" role="alert">{errors.general.map((message) => <p key={message}>{message}</p>)}</div>
       )}
       <fieldset className="account-options">
-        <legend>Tipo de pessoa</legend>
+        <legend>{signup.personType}</legend>
         <label>
           <input
             type="radio"
@@ -107,7 +107,7 @@ export function SignupForm({ planCode }: { planCode?: string }) {
               setTaxId((value) => formatTaxId(value, "legal_entity"));
             }}
           />
-          Pessoa jurídica (CNPJ)
+          {signup.legalEntity}
         </label>
         <label>
           <input
@@ -120,27 +120,27 @@ export function SignupForm({ planCode }: { planCode?: string }) {
               setTaxId((value) => formatTaxId(value, "individual"));
             }}
           />
-          Pessoa física (CPF)
+          {signup.individual}
         </label>
       </fieldset>
       <label>
-        Perfil
+        {signup.profile}
         <select name="profile" value={profile} onChange={(event) => setProfile(event.target.value as Profile)}>
-          <option value="gym">Academia</option>
-          <option value="personal_trainer">Personal trainer</option>
-          <option value="nutritionist">Nutricionista</option>
-          <option value="multidisciplinary">Equipe multidisciplinar</option>
+          <option value="gym">{signup.gym}</option>
+          <option value="personal_trainer">{signup.trainer}</option>
+          <option value="nutritionist">{signup.nutritionist}</option>
+          <option value="multidisciplinary">{signup.team}</option>
         </select>
       </label>
       <Field
-        label={personType === "individual" ? "Nome profissional" : "Nome da academia ou negócio"}
+        label={personType === "individual" ? signup.professionalName : signup.businessName}
         name="tenant_name"
         errors={f.tenant_name}
         required
         maxLength={200}
       />
       <Field
-        label={personType === "individual" ? "CPF" : "CNPJ"}
+        label={personType === "individual" ? signup.cpf : signup.cnpj}
         name="tax_id"
         errors={f.tax_id}
         inputMode="numeric"
@@ -150,12 +150,12 @@ export function SignupForm({ planCode }: { planCode?: string }) {
         value={taxId}
         onChange={(event) => setTaxId(formatTaxId(event.target.value, personType))}
       />
-      <Field label="Responsável" name="first_name" errors={f.first_name} required maxLength={150} autoComplete="given-name" />
-      <Field label="Sobrenome" name="last_name" errors={f.last_name} maxLength={150} autoComplete="family-name" />
-      <Field label="E-mail" name="email" errors={f.email} type="email" required autoComplete="email" />
-      <Field label="Senha" name="password" errors={f.password} type="password" required minLength={8} autoComplete="new-password" />
+      <Field label={signup.firstName} name="first_name" errors={f.first_name} required maxLength={150} autoComplete="given-name" />
+      <Field label={signup.lastName} name="last_name" errors={f.last_name} maxLength={150} autoComplete="family-name" />
+      <Field label={signup.email} name="email" errors={f.email} type="email" required autoComplete="email" />
+      <Field label={signup.password} name="password" errors={f.password} type="password" required minLength={8} autoComplete="new-password" />
       {f.plan_code && <p className="field-error" role="alert">{f.plan_code.join(" ")}</p>}
-      <button className="btn" type="submit" disabled={busy}>{busy ? "Criando…" : "Criar conta"}</button>
+      <button className="btn" type="submit" disabled={busy}>{busy ? signup.creating : signup.submit}</button>
     </form>
   );
 }

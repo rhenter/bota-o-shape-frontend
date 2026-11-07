@@ -15,7 +15,9 @@ const owner = {
 describe("fetchPlans", () => {
   it("hides the pilot plan and reads paginated results", async () => {
     const f = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ results: [{ code: "pilot" }, { code: "pro" }] }) });
-    expect((await fetchPlans(f as never))?.map((p) => p.code)).toEqual(["pro"]);
+    const plans = await fetchPlans(f as never);
+    expect(plans?.map((p) => p.code)).toEqual(["pro"]);
+    expect(plans?.[0]?.features).toEqual([]);
   });
   it("returns null when the API is unavailable", async () => {
     expect(await fetchPlans(vi.fn().mockRejectedValue(new Error("down")) as never)).toBeNull();

@@ -23,7 +23,7 @@ describe("ContactForm", () => {
     await user.click(screen.getByRole("checkbox"));
     await user.click(screen.getByRole("button", { name: "Enviar mensagem" }));
     expect(await screen.findByRole("status")).toHaveTextContent("Mensagem enviada");
-    expect(mockedSubmitContact).toHaveBeenCalledWith(expect.objectContaining({ consent: true }));
+    expect(mockedSubmitContact.mock.calls[0][0]).toEqual(expect.objectContaining({ consent: true }));
   });
 
   it("shows API errors and restores the submit action", async () => {

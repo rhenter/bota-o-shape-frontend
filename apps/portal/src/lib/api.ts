@@ -1,3 +1,5 @@
+import { ptBR, type Messages } from "@/i18n/pt-BR";
+
 export type Plan = {
   id: string;
   code: string;
@@ -17,7 +19,12 @@ export async function fetchPlans(fetcher: typeof fetch = fetch): Promise<Plan[] 
     if (!response.ok) return null;
     const body = (await response.json()) as { results?: Plan[] } | Plan[];
     const plans = Array.isArray(body) ? body : (body.results ?? []);
-    return plans.filter((plan) => plan.code !== "pilot");
+    return plans
+      .filter((plan) => plan.code !== "pilot")
+      .map((plan) => ({
+        ...plan,
+        features: Array.isArray(plan.features) ? plan.features.filter((feature) => Boolean(feature)) : [],
+      }));
   } catch {
     return null;
   }
@@ -112,6 +119,7 @@ export async function fetchPublicContact(fetcher: typeof fetch = fetch): Promise
 export async function submitContact(
   data: ContactRequest,
   fetcher: typeof fetch = fetch,
+  copy: Messages["errors"] = ptBR.errors,
 ): Promise<RegistrationErrors | null> {
   try {
     const response = await fetcher("/api/core/contact-requests/", {
@@ -130,15 +138,16 @@ export async function submitContact(
       return { fields, general: [] };
     }
   } catch {
-    return { fields: {}, general: ["Não foi possível conectar ao servidor. Tente novamente."] };
+    return { fields: {}, general: [copy.offline] };
   }
-  return { fields: {}, general: ["Não foi possível enviar sua mensagem. Tente novamente."] };
+  return { fields: {}, general: [copy.contactFailed] };
 }
 
 /** Returns null on success or the errors, split by field. */
 export async function registerOwner(
   data: OwnerRegistration,
   fetcher: typeof fetch = fetch,
+  copy: Messages["errors"] = ptBR.errors,
 ): Promise<RegistrationErrors | null> {
   let response: Response;
   try {
@@ -148,7 +157,7 @@ export async function registerOwner(
       body: JSON.stringify(data),
     });
   } catch {
-    return { fields: {}, general: ["Não foi possível conectar ao servidor. Tente novamente."] };
+    return { fields: {}, general: [copy.offline] };
   }
   if (response.ok) return null;
   if (response.status === 400) {
@@ -163,5 +172,5 @@ export async function registerOwner(
     }
     if (general.length || Object.keys(fields).length) return { fields, general };
   }
-  return { fields: {}, general: ["Não foi possível concluir o cadastro. Tente novamente."] };
+  return { fields: {}, general: [copy.signupFailed] };
 }

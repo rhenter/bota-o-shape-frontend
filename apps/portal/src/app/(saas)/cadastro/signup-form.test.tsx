@@ -34,7 +34,7 @@ describe("SignupForm", () => {
     await user.click(screen.getByRole("button", { name: "Criar conta" }));
 
     await waitFor(() => expect(mockedRegisterOwner).toHaveBeenCalledOnce());
-    expect(mockedRegisterOwner).toHaveBeenCalledWith({
+    expect(mockedRegisterOwner.mock.calls[0][0]).toEqual({
       tenant_name: "Ana Treinadora",
       person_type: "individual",
       tax_id: "52998224725",

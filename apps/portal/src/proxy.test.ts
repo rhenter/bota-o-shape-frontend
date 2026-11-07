@@ -6,6 +6,8 @@ const hosts = portalHosts("botaoshape.com.br,www.botaoshape.com.br");
 describe("customDomainRewrite", () => {
   it("keeps the main domain on the SaaS portal", () => {
     expect(customDomainRewrite("botaoshape.com.br", "/", hosts)).toBeNull();
+    expect(customDomainRewrite("www.botaoshape.com.br", "/", hosts)).toBeNull();
+    expect(customDomainRewrite("www.botaoshape.com.br", "/academia-exemplo", hosts)).toBeNull();
     expect(customDomainRewrite("localhost:3001", "/", hosts)).toBeNull();
   });
   it("serves the landing for a custom domain root", () => {

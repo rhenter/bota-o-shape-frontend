@@ -1,30 +1,35 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ProductShowcase } from "@/components/product-showcase";
+import { getMessages } from "@/i18n/server";
 
-export const metadata: Metadata = {
-  title: "Produto",
-  description: "Veja como a equipe da academia e os alunos usam o Bota o Shape! no dia a dia.",
-  alternates: { canonical: "/produto" },
-  openGraph: { url: "/produto", title: "Produto · Bota o Shape!" },
-  twitter: { card: "summary", title: "Produto · Bota o Shape!", description: "Conheça as telas de gestão e do aplicativo do aluno." },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { meta } = await getMessages();
+  return {
+    title: meta.productTitle,
+    description: meta.productDescription,
+    alternates: { canonical: "/produto" },
+    openGraph: { url: "/produto", title: meta.productOgTitle },
+    twitter: { card: "summary", title: meta.productOgTitle, description: meta.productTwitterDescription },
+  };
+}
 
-export default function ProductPage() {
+export default async function ProductPage() {
+  const { product } = await getMessages();
   return (
     <>
       <section className="product-hero">
         <div className="wrap">
-          <span className="eyebrow">O Produto</span>
-          <h1>Tudo o que você precisa para gerir sua academia</h1>
-          <p>Conheça as telas reais usadas pela gestão, professores, nutricionistas e alunos.</p>
+          <span className="eyebrow">{product.eyebrow}</span>
+          <h1>{product.title}</h1>
+          <p>{product.lead}</p>
         </div>
       </section>
       <div className="wrap"><ProductShowcase /></div>
       <section className="product-cta">
         <div className="wrap actions">
-          <Link href="/cadastro" className="btn">Criar conta</Link>
-          <Link href="/planos" className="btn ghost-dark">Ver planos</Link>
+          <Link href="/cadastro" className="btn">{product.signup}</Link>
+          <Link href="/planos" className="btn ghost-dark">{product.plans}</Link>
         </div>
       </section>
     </>

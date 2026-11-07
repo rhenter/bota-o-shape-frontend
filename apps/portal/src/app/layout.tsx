@@ -1,24 +1,32 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
+import { I18nProvider } from "@/i18n/provider";
+import { getLocale, getMessages } from "@/i18n/server";
 import { SITE_URL } from "@/lib/api";
 
-export const metadata: Metadata = {
-  metadataBase: new URL(SITE_URL),
-  title: { default: "Bota o Shape! — Gestão para academias", template: "%s · Bota o Shape!" },
-  description: "Treinos, avaliações e nutrição para a sua academia e seus alunos, em uma só plataforma.",
-  openGraph: { siteName: "Bota o Shape!", type: "website", locale: "pt_BR" },
-  twitter: {
-    card: "summary",
-    title: "Bota o Shape! — Gestão para academias",
-    description: "Treinos, avaliações e nutrição em uma só plataforma.",
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const messages = await getMessages();
+  return {
+    metadataBase: new URL(SITE_URL),
+    title: { default: messages.meta.siteTitle, template: "%s · Bota o Shape!" },
+    description: messages.meta.siteDescription,
+    openGraph: { siteName: "Bota o Shape!", type: "website", locale: messages.meta.ogLocale },
+    twitter: {
+      card: "summary",
+      title: messages.meta.siteTitle,
+      description: messages.meta.siteDescription,
+    },
+  };
+}
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const [locale, messages] = await Promise.all([getLocale(), getMessages()]);
   return (
-    <html lang="pt-BR">
-      <body>{children}</body>
+    <html lang={locale}>
+      <body>
+        <I18nProvider messages={messages}>{children}</I18nProvider>
+      </body>
     </html>
   );
 }

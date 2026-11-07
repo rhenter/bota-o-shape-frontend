@@ -17,8 +17,9 @@ export function customDomainRewrite(host: string, pathname: string, hosts = port
 
 export function proxy(request: NextRequest) {
   const target = customDomainRewrite(request.headers.get("host") ?? "", request.nextUrl.pathname);
-  if (!target) return NextResponse.next();
-  return NextResponse.rewrite(new URL(target, request.url));
+  const response = target ? NextResponse.rewrite(new URL(target, request.url)) : NextResponse.next();
+  response.headers.set("Vary", "Accept-Language");
+  return response;
 }
 
-export const config = { matcher: ["/"] };
+export const config = { matcher: ["/((?!_next/static|_next/image|favicon.ico|brand/|screens/).*)"] };
