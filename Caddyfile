@@ -1,0 +1,21 @@
+{
+	admin off
+	persist_config off
+	auto_https off
+}
+
+:{$PORT:3000} {
+	handle /health {
+		respond "ok" 200
+	}
+
+	# Gym dashboard. Next serves it with basePath /admin.
+	handle /admin* {
+		reverse_proxy 127.0.0.1:3102
+	}
+
+	# Commercial site and /{academy-slug} landings.
+	handle {
+		reverse_proxy 127.0.0.1:3101
+	}
+}

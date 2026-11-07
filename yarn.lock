@@ -513,6 +513,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@graphql-typed-document-node/core@npm:^3.2.0":
+  version: 3.2.0
+  resolution: "@graphql-typed-document-node/core@npm:3.2.0"
+  peerDependencies:
+    graphql: ^0.8.0 || ^0.9.0 || ^0.10.0 || ^0.11.0 || ^0.12.0 || ^0.13.0 || ^14.0.0 || ^15.0.0 || ^16.0.0 || ^17.0.0
+  checksum: 10c0/94e9d75c1f178bbae8d874f5a9361708a3350c8def7eaeb6920f2c820e82403b7d4f55b3735856d68e145e86c85cbfe2adc444fdc25519cd51f108697e99346c
+  languageName: node
+  linkType: hard
+
 "@humanfs/core@npm:^0.19.2":
   version: 0.19.2
   resolution: "@humanfs/core@npm:0.19.2"
@@ -1891,6 +1900,8 @@ __metadata:
 "bota-o-shape-frontend@workspace:.":
   version: 0.0.0-use.local
   resolution: "bota-o-shape-frontend@workspace:."
+  dependencies:
+    railway: "npm:^3.16.0"
   languageName: unknown
   linkType: soft
 
@@ -3029,6 +3040,13 @@ __metadata:
   version: 4.2.11
   resolution: "graceful-fs@npm:4.2.11"
   checksum: 10c0/386d011a553e02bc594ac2ca0bd6d9e4c22d7fa8cfbfc448a6d148c59ea881b092db9dbe3547ae4b88e55f1b01f7c4a2ecc53b310c042793e63aa44cf6c257f2
+  languageName: node
+  linkType: hard
+
+"graphql@npm:^16.10.0":
+  version: 16.15.0
+  resolution: "graphql@npm:16.15.0"
+  checksum: 10c0/b97c78a02dab6392cdc492e78290bca479b5881dbeeefaed79cc88128b0e9a810feea043da61c5cd086f1af645dc9c46d61ed5297995031d8542a11c94f7cd0f
   languageName: node
   linkType: hard
 
@@ -4293,6 +4311,18 @@ __metadata:
   version: 1.2.3
   resolution: "queue-microtask@npm:1.2.3"
   checksum: 10c0/900a93d3cdae3acd7d16f642c29a642aea32c2026446151f0778c62ac089d4b8e6c986811076e1ae180a694cedf077d453a11b58ff0a865629a4f82ab558e102
+  languageName: node
+  linkType: hard
+
+"railway@npm:^3.16.0":
+  version: 3.16.0
+  resolution: "railway@npm:3.16.0"
+  dependencies:
+    "@graphql-typed-document-node/core": "npm:^3.2.0"
+    graphql: "npm:^16.10.0"
+  bin:
+    railway-iac-ts: dist/iac/bin.js
+  checksum: 10c0/dc5a2ea8ac24e4eff725b9d72c706c1c2e303d31df95cb75029f68b0f5ec962785ec9218702b189cc98df0a0082b568b55dec61643730c1ee47560fec5580944
   languageName: node
   linkType: hard
 

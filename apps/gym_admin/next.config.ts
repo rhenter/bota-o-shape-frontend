@@ -1,11 +1,18 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import type { NextConfig } from "next";
 
 const apiBaseUrl = (process.env.API_BASE_URL ?? "http://127.0.0.1:8006").replace(
   /\/$/,
   "",
 );
+const appDirectory = path.dirname(fileURLToPath(import.meta.url));
+const basePath = (process.env.NEXT_PUBLIC_BASE_PATH ?? "").replace(/\/$/, "");
 
 const nextConfig: NextConfig = {
+  output: "standalone",
+  outputFileTracingRoot: path.resolve(appDirectory, "../.."),
+  ...(basePath ? { basePath } : {}),
   skipTrailingSlashRedirect: true,
   async rewrites() {
     return [

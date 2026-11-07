@@ -195,6 +195,12 @@ See the [student app guide](apps/student/README.md) for local HTTP configuration
 
 ---
 
+## Deploy
+
+The web apps deploy to Railway from [`.railway/railway.ts`](.railway/railway.ts). `botaoshape.com.br` and `www.botaoshape.com.br` stay on the API and are both served by the `portal` service: the commercial site at `/`, academy landings at `/{slug}`, and the gym dashboard at `/admin`. The `saas` service is `admin.botaoshape.com.br`. Details are in [`.railway/README.md`](.railway/README.md). The Flutter student app is not part of that deploy.
+
+---
+
 ## 📁 Project structure
 
 ```text

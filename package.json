@@ -10,6 +10,9 @@
   "engines": {
     "node": ">=24.15.0 <25"
   },
+  "devDependencies": {
+    "railway": "^3.16.0"
+  },
   "scripts": {
     "dev": "yarn workspace @bota-o-shape/gym-admin dev",
     "build": "yarn workspace @bota-o-shape/gym-admin build",
