@@ -51,8 +51,8 @@ export default defineRailway((ctx) => {
       NEXT_PUBLIC_ADMIN_URL: "https://botaoshape.com.br/admin",
       NEXT_PUBLIC_SITE_URL: "https://botaoshape.com.br",
       PORTAL_HOSTS: "botaoshape.com.br,www.botaoshape.com.br",
-      // Private address of gym_admin. Resolved by Railway before the portal build.
-      GYM_ADMIN_ORIGIN: "http://${{gym_admin.RAILWAY_PRIVATE_DOMAIN}}:${{gym_admin.PORT}}",
+      // Private address of gym_admin. The domain reference resolves; PORT does not, so the port is fixed.
+      GYM_ADMIN_ORIGIN: "http://${{gym_admin.RAILWAY_PRIVATE_DOMAIN}}:8080",
     },
   });
 
@@ -71,6 +71,7 @@ export default defineRailway((ctx) => {
       APP_NAME: "gym_admin",
       API_BASE_URL: apiBaseUrl,
       NEXT_PUBLIC_BASE_PATH: "/admin",
+      PORT: "8080",
     },
   });
 
