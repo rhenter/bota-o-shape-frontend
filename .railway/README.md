@@ -1,30 +1,16 @@
 # Railway Infrastructure as Code
 
-Esta pasta define dois serviços web no Railway. O domínio `botaoshape.com.br` já pertence ao serviço da API e não deve ser associado aqui.
+Esta pasta define três serviços web no Railway, um para cada app Next.js. O `Dockerfile` da raiz recebe `APP_NAME`, compila só aquele workspace e inicia o `next start` dele.
 
-| URL pública | Quem responde |
-| --- | --- |
-| `admin.botaoshape.com.br` | serviço `saas` (`apps/saas_admin`) |
-| `botaoshape.com.br` e `www.botaoshape.com.br` | portal, dentro do serviço `portal` |
-| `botaoshape.com.br/admin` e `www.botaoshape.com.br/admin` | painel da academia (`apps/gym_admin`), no mesmo serviço |
-| `botaoshape.com.br/{nome-da-academia}` e o mesmo caminho em `www` | landing da academia, no portal |
-
-O serviço `portal` compila os dois apps Next.js. O Caddy publica os dois no mesmo processo: `/admin` vai para o painel, com `basePath` `/admin`, e o restante vai para o portal. `/health` responde no Caddy. O serviço `saas` sobe só o console da plataforma.
+| Serviço | App | Domínio previsto |
+| --- | --- | --- |
+| `portal` | `apps/portal` | `botaoshape.com.br` e `www.botaoshape.com.br` |
+| `gym_admin` | `apps/gym_admin` | `painel.botaoshape.com.br` |
+| `saas_admin` | `apps/saas_admin` | `admin.botaoshape.com.br` |
 
 O partial exportado é `frontends`, no projeto `bota-o-shape-frontend`, separado da API. Fora de produção os serviços dormem. Os deploys saem de `main`.
 
-## Domínio da API
-
-Não cadastre `botaoshape.com.br` nem `www.botaoshape.com.br` neste projeto. Os dois continuam no serviço `api`. Esse serviço precisa encaminhar o tráfego dos dois hosts que não é `/api` para a URL do serviço `portal`:
-
-- `/api` permanece no Django.
-- `/admin` e o restante de cada host vão para o `portal`.
-
-O único domínio a associar manualmente neste projeto é `admin.botaoshape.com.br`, no serviço `saas`.
-
-## Escala e cache
-
-Em produção o `portal` tem duas réplicas, até 1 vCPU e 1 GiB cada, porque o container roda o portal e o painel. O `saas` tem uma réplica, até 0,5 vCPU e 512 MiB. O CDN fica ligado nos dois, sem cache de HTML.
+`botaoshape.com.br` e `www.botaoshape.com.br` ainda podem estar no serviço `api`. Não os cadastre aqui enquanto a API responder por esses hosts. O painel da academia não usa `basePath`: no serviço `gym_admin` ele responde na raiz.
 
 ## Planejar e aplicar
 
@@ -41,16 +27,16 @@ Revise o plano antes de aplicá-lo. Criar os serviços pode gerar uso cobrado pe
 
 ## Variáveis
 
-Os dois serviços usam `API_BASE_URL=https://botaoshape.com.br`. Essa URL entra no build por causa dos rewrites de `/api` e continua disponível em runtime.
+Os três serviços usam `API_BASE_URL=https://api.botaoshape.com.br`. Essa URL entra no build por causa dos rewrites de `/api` e continua disponível em runtime.
 
 O `portal` recebe ainda:
 
-- `NEXT_PUBLIC_ADMIN_URL=https://botaoshape.com.br/admin`
+- `NEXT_PUBLIC_ADMIN_URL=https://painel.botaoshape.com.br`
 - `NEXT_PUBLIC_SITE_URL=https://botaoshape.com.br`
 - `PORTAL_HOSTS=botaoshape.com.br,www.botaoshape.com.br`
 
-`PORTAL_HOSTS` marca os hosts do site. `www.botaoshape.com.br` responde o mesmo portal, o mesmo `/admin` e as mesmas landings. Outro host ainda pode ser tratado como domínio de academia. A landing principal é o caminho `/{nome-da-academia}`.
+`PORTAL_HOSTS` marca os hosts do site comercial. Outro host ainda pode ser tratado como domínio de academia. A landing da academia é o caminho `/{nome-da-academia}`.
 
 `NEXT_PUBLIC_*` fica no bundle. Não coloque segredos nessas variáveis.
 
-A origem `https://admin.botaoshape.com.br` precisa estar em `PLATFORM_ALLOWED_ORIGINS` no serviço `api`. O painel da academia chama `/api` no mesmo host do site, então não precisa de uma origem separada.
+As origens `https://painel.botaoshape.com.br` e `https://admin.botaoshape.com.br` precisam estar em `PLATFORM_ALLOWED_ORIGINS` no serviço `api` quando esses domínios forem publicados. Enquanto cada app estiver só no domínio `*.up.railway.app`, inclua essa origem também.

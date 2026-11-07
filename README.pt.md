@@ -197,7 +197,7 @@ Consulte o [guia do aplicativo do aluno](apps/student/README.pt.md) para configu
 
 ## Deploy
 
-Os apps web sobem no Railway a partir de [`.railway/railway.ts`](.railway/railway.ts). `botaoshape.com.br` e `www.botaoshape.com.br` continuam na API e os dois são respondidos pelo serviço `portal`: o site em `/`, a landing em `/{nome-da-academia}` e o painel da academia em `/admin`. O serviço `saas` fica em `admin.botaoshape.com.br`. O detalhe está em [`.railway/README.md`](.railway/README.md). O aplicativo Flutter do aluno fica de fora desse deploy.
+Os apps web sobem no Railway a partir de [`.railway/railway.ts`](.railway/railway.ts) em três serviços: `portal`, `gym_admin` e `saas_admin`. Cada serviço compila só o próprio workspace e executa `next start`. Os hosts previstos são `botaoshape.com.br` para o portal, `painel.botaoshape.com.br` para o painel da academia e `admin.botaoshape.com.br` para o console da plataforma. O detalhe está em [`.railway/README.md`](.railway/README.md). O aplicativo Flutter do aluno fica de fora desse deploy.
 
 ---
 

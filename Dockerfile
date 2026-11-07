@@ -23,39 +23,16 @@ RUN corepack enable && yarn install --immutable
 
 COPY . .
 
-RUN set -eu; \
-    copy_standalone() { \
-      app="$1"; dest="$2"; \
-      mkdir -p "/out/${dest}"; \
-      cp -R "apps/${app}/.next/standalone/." "/out/${dest}/"; \
-      mkdir -p "/out/${dest}/apps/${app}/.next/static"; \
-      cp -R "apps/${app}/.next/static/." "/out/${dest}/apps/${app}/.next/static/"; \
-      if [ -d "apps/${app}/public" ]; then \
-        mkdir -p "/out/${dest}/apps/${app}/public"; \
-        cp -R "apps/${app}/public/." "/out/${dest}/apps/${app}/public/"; \
-      fi; \
-    }; \
-    case "${APP_NAME}" in \
-      web) \
-        test -n "${API_BASE_URL}" || (echo "API_BASE_URL is required" >&2; exit 1); \
-        NEXT_PUBLIC_BASE_PATH=/admin yarn workspace @bota-o-shape/gym-admin build; \
-        yarn workspace @bota-o-shape/portal build; \
-        copy_standalone gym_admin gym; \
-        copy_standalone portal portal; \
-        ;; \
-      saas_admin) \
-        test -n "${API_BASE_URL}" || (echo "API_BASE_URL is required for ${APP_NAME}" >&2; exit 1); \
-        yarn workspace @bota-o-shape/saas-admin build; \
-        copy_standalone saas_admin app; \
-        ;; \
-      *) echo "APP_NAME must be web or saas_admin" >&2; exit 1 ;; \
+RUN case "${APP_NAME}" in \
+      portal) yarn workspace @bota-o-shape/portal build ;; \
+      gym_admin) yarn workspace @bota-o-shape/gym-admin build ;; \
+      saas_admin) yarn workspace @bota-o-shape/saas-admin build ;; \
+      *) echo "APP_NAME must be portal, gym_admin, or saas_admin" >&2; exit 1 ;; \
     esac
-
-FROM caddy:2-alpine AS caddy
 
 FROM node:24-alpine AS runtime
 
-WORKDIR /srv
+WORKDIR /app
 
 ARG APP_NAME
 ENV APP_NAME=${APP_NAME}
@@ -63,10 +40,9 @@ ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
 ENV NEXT_TELEMETRY_DISABLED=1
 
-COPY --from=caddy /usr/bin/caddy /usr/bin/caddy
-COPY Caddyfile /srv/Caddyfile
-COPY scripts/web-start.sh /srv/web-start.sh
-COPY --from=build /out /srv/out
-RUN chmod +x /srv/web-start.sh
+COPY --from=build /app/package.json /app/yarn.lock /app/.yarnrc.yml ./
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/apps ./apps
+COPY scripts/next-with-env.cjs ./scripts/next-with-env.cjs
 
-CMD ["sh", "-c", "if [ \"$APP_NAME\" = web ]; then exec /srv/web-start.sh; else exec node /srv/out/app/apps/$APP_NAME/server.js; fi"]
+CMD ["sh", "-c", "cd apps/$APP_NAME && node ../../scripts/next-with-env.cjs start --hostname 0.0.0.0 --port ${PORT:-3000}"]

@@ -12,14 +12,9 @@ const commonWatchPatterns = [
   "/.yarnrc.yml",
   "/Dockerfile",
   "/.dockerignore",
-  "/Caddyfile",
-  "/scripts/web-start.sh",
 ];
 
 const mebibyte = 1024 * 1024;
-
-// The apex host already belongs to the API service. Browser calls and
-// server-side fetches use that same origin; Django keeps /api.
 const apiBaseUrl = "https://api.botaoshape.com.br";
 
 export default defineRailway((ctx) => {
@@ -42,42 +37,36 @@ export default defineRailway((ctx) => {
         },
       },
     },
-    cdn: isProduction
-      ? {
-          enabled: true,
-          htmlCaching: "never" as const,
-          purgeOnDeploy: "html" as const,
-        }
-      : undefined,
   };
 
-  // One host, two apps: / and /{academy} on the portal, /admin on the gym dashboard.
   const portal = service("portal", {
     ...common,
     build: {
       ...common.build,
-      watchPatterns: ["/apps/portal/**", "/apps/gym_admin/**", ...commonWatchPatterns],
-    },
-    deploy: {
-      ...common.deploy,
-      numReplicas: isProduction ? 2 : 1,
-      limitOverride: {
-        containers: {
-          cpu: 1,
-          memoryBytes: 1024 * mebibyte,
-        },
-      },
+      watchPatterns: ["/apps/portal/**", ...commonWatchPatterns],
     },
     env: {
-      APP_NAME: "web",
+      APP_NAME: "portal",
       API_BASE_URL: apiBaseUrl,
-      NEXT_PUBLIC_ADMIN_URL: "https://botaoshape.com.br/admin",
+      NEXT_PUBLIC_ADMIN_URL: "https://painel.botaoshape.com.br",
       NEXT_PUBLIC_SITE_URL: "https://botaoshape.com.br",
       PORTAL_HOSTS: "botaoshape.com.br,www.botaoshape.com.br",
     },
   });
 
-  const saas = service("saas", {
+  const gymAdmin = service("gym_admin", {
+    ...common,
+    build: {
+      ...common.build,
+      watchPatterns: ["/apps/gym_admin/**", ...commonWatchPatterns],
+    },
+    env: {
+      APP_NAME: "gym_admin",
+      API_BASE_URL: apiBaseUrl,
+    },
+  });
+
+  const saasAdmin = service("saas_admin", {
     ...common,
     build: {
       ...common.build,
@@ -90,6 +79,6 @@ export default defineRailway((ctx) => {
   });
 
   return project("bota-o-shape-frontend", {
-    resources: [group("Frontends", [portal, saas])],
+    resources: [group("Frontends", [portal, gymAdmin, saasAdmin])],
   });
 });
