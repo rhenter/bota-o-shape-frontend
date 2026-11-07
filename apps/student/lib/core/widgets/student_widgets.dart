@@ -90,13 +90,10 @@ class Brand extends StatelessWidget {
   const Brand({super.key, this.width = 180});
   final double width;
   @override
-  Widget build(BuildContext context) => Container(
-    color: AppTheme.navy,
-    padding: const EdgeInsets.all(12),
-    child: Image.asset(
-      'assets/brand/logo.png',
-      width: width,
-      semanticLabel: 'Bota o Shape!',
-    ),
+  Widget build(BuildContext context) => Image.asset(
+    'assets/brand/logo-dark-header.png',
+    width: width,
+    fit: BoxFit.contain,
+    semanticLabel: 'Bota o Shape!',
   );
 }

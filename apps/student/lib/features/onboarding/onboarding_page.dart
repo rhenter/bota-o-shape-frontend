@@ -73,11 +73,20 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Seu primeiro acesso')),
+    appBar: AppBar(
+      toolbarHeight: 108,
+      title: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Brand(width: 148),
+          SizedBox(height: 4),
+          Text('Seu primeiro acesso'),
+        ],
+      ),
+    ),
     body: PageBody(
       children: [
-        const Brand(),
-        const SizedBox(height: 24),
         Text(
           'Vamos personalizar sua experiência',
           style: Theme.of(context).textTheme.headlineMedium,
