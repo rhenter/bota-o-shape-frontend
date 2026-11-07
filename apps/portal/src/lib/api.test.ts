@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { fetchAcademy, fetchPlans, fetchPublicContact, registerOwner, submitContact } from "./api";
+import { fetchAcademy, fetchFaq, fetchPlans, fetchPublicContact, registerOwner, submitContact } from "./api";
 
 const owner = {
   tenant_name: "A",
@@ -19,9 +19,47 @@ describe("fetchPlans", () => {
     expect(plans?.map((p) => p.code)).toEqual(["pro"]);
     expect(plans?.[0]?.features).toEqual([]);
   });
+  it("reads price, limits and features from the published version", async () => {
+    const f = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        results: [{
+          id: "1",
+          code: "start",
+          name: "Start",
+          current_version: { features: ["workouts"], limits: { active_students: 300 }, price_reference: "R$ 199,00/mês" },
+        }],
+      }),
+    });
+    const plans = await fetchPlans(f as never);
+    expect(plans?.[0]).toMatchObject({
+      code: "start",
+      features: ["workouts"],
+      limits: { active_students: 300 },
+      price_reference: "R$ 199,00/mês",
+    });
+  });
   it("returns null when the API is unavailable", async () => {
     expect(await fetchPlans(vi.fn().mockRejectedValue(new Error("down")) as never)).toBeNull();
     expect(await fetchPlans(vi.fn().mockResolvedValue({ ok: false }) as never)).toBeNull();
+  });
+});
+
+describe("fetchFaq", () => {
+  it("reads the published list for the requested locale", async () => {
+    const f = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [{ id: "1", question: "O app do aluno está incluso?", answer: "Sim." }],
+    });
+    expect(await fetchFaq("pt-BR", f as never)).toEqual([
+      { id: "1", question: "O app do aluno está incluso?", answer: "Sim." },
+    ]);
+    expect(f.mock.calls[0][0]).toContain("/api/v1/support/faq/?locale=pt-BR");
+  });
+
+  it("returns null when the API is unavailable", async () => {
+    expect(await fetchFaq("en", vi.fn().mockRejectedValue(new Error("down")) as never)).toBeNull();
+    expect(await fetchFaq("en", vi.fn().mockResolvedValue({ ok: false }) as never)).toBeNull();
   });
 });
 

@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { MarketingFaq, marketingFaqItems } from "@/components/marketing-faq";
-import { getMessages } from "@/i18n/server";
-import { fetchPlans, PRO_PLAN, SITE_URL } from "@/lib/api";
+import { MarketingFaq } from "@/components/marketing-faq";
+import type { Messages } from "@/i18n/pt-BR";
+import { getLocale, getMessages } from "@/i18n/server";
+import { fetchFaq, fetchPlans, SITE_URL, type Plan } from "@/lib/api";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { meta } = await getMessages();
@@ -18,11 +19,10 @@ export async function generateMetadata(): Promise<Metadata> {
 export const revalidate = 300;
 
 export default async function Home() {
-  const [plans, messages] = await Promise.all([fetchPlans(), getMessages()]);
+  const locale = await getLocale();
+  const [plans, messages, faq] = await Promise.all([fetchPlans(), getMessages(), fetchFaq(locale)]);
   const home = messages.home;
-  const pro = plans?.find((plan) => plan.code === PRO_PLAN.code);
-  const faq = marketingFaqItems(pro, messages);
-  const planFeatures = pro?.features?.filter(Boolean).slice(0, 4) ?? [];
+  const startingPrice = lowestPublishedPrice(plans);
   const structuredData = [
     { "@context": "https://schema.org", "@type": "Organization", name: "Bota o Shape!", url: SITE_URL },
     { "@context": "https://schema.org", "@type": "SoftwareApplication", name: "Bota o Shape!", applicationCategory: "BusinessApplication", operatingSystem: "Web, Android e iOS", url: SITE_URL },
@@ -98,12 +98,8 @@ export default async function Home() {
 
       <section className="home-section commercial-section">
         <div className="wrap commercial-grid">
-          <article className="home-plan-card">
-            <div><span>{home.planName}</span><strong>{home.planPrice}<small>{home.perMonth}</small></strong></div>
-            <ul><li>{home.studentLimit}</li>{planFeatures.map((feature) => <li key={feature}>{feature}</li>)}</ul>
-            <Link href="/cadastro?plano=pro" className="btn">{home.startPro}</Link>
-          </article>
-          <MarketingFaq items={faq} title={messages.faq.title} />
+          <HomePlanTeaser price={startingPrice} copy={home} />
+          {faq?.length ? <MarketingFaq items={faq} title={messages.faq.title} /> : null}
         </div>
       </section>
 
@@ -111,5 +107,36 @@ export default async function Home() {
         <div className="wrap"><h2>{home.finalTitle}</h2><div className="actions"><Link href="/cadastro" className="btn">{home.finalStart} <span aria-hidden="true">→</span></Link><Link href="/produto" className="btn outline">{home.knowProduct}</Link></div></div>
       </section>
     </>
+  );
+}
+
+/** Lowest numeric price published by the API. Non-numeric references are ignored. */
+export function lowestPublishedPrice(plans: Plan[] | null): string | null {
+  let best: { amount: number; label: string } | null = null;
+  for (const plan of plans ?? []) {
+    const amount = brlAmount(plan.price_reference);
+    const label = plan.price_reference.trim();
+    if (amount === null || !label) continue;
+    if (!best || amount < best.amount) best = { amount, label };
+  }
+  return best?.label ?? null;
+}
+
+function brlAmount(value: string): number | null {
+  const match = value.match(/(?:R\$\s*)?(\d{1,3}(?:\.\d{3})+|\d+),(\d{2})/);
+  if (!match) return null;
+  return Number(`${match[1].replace(/\./g, "")}.${match[2]}`);
+}
+
+export function HomePlanTeaser({ price, copy }: { price: string | null; copy: Messages["home"] }) {
+  return (
+    <article className="home-plan-card">
+      <div>
+        <span>{copy.plansTitle}</span>
+        {price ? <p className="plan-from">{copy.startingFrom} <strong>{price}</strong></p> : null}
+      </div>
+      <ul>{copy.planBenefits.map((benefit) => <li key={benefit}>{benefit}</li>)}</ul>
+      <Link href="/planos" className="btn">{copy.seeAllPlans}</Link>
+    </article>
   );
 }

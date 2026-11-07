@@ -9,6 +9,29 @@ export type Plan = {
   price_reference: string;
 };
 
+type PlanPayload = Plan & {
+  current_version?: {
+    features?: string[];
+    limits?: Record<string, unknown>;
+    price_reference?: string;
+  } | null;
+};
+
+/** Published commercial fields live on current_version; older payloads put them on the plan. */
+function normalizePlan(plan: PlanPayload): Plan {
+  const version = plan.current_version;
+  const features = version?.features ?? plan.features;
+  const limits = version?.limits ?? plan.limits;
+  return {
+    id: plan.id,
+    code: plan.code,
+    name: plan.name,
+    features: Array.isArray(features) ? features.filter((feature) => Boolean(feature)) : [],
+    limits: limits && typeof limits === "object" ? limits : {},
+    price_reference: version?.price_reference ?? plan.price_reference ?? "",
+  };
+}
+
 export const API_BASE_URL = (process.env.API_BASE_URL ?? "http://127.0.0.1:8006").replace(/\/$/, "");
 export const ADMIN_URL = process.env.NEXT_PUBLIC_ADMIN_URL ?? "http://localhost:3000";
 
@@ -17,20 +40,37 @@ export async function fetchPlans(fetcher: typeof fetch = fetch): Promise<Plan[] 
   try {
     const response = await fetcher(`${API_BASE_URL}/api/billing/plans/`, { next: { revalidate: 300 } });
     if (!response.ok) return null;
-    const body = (await response.json()) as { results?: Plan[] } | Plan[];
+    const body = (await response.json()) as { results?: PlanPayload[] } | PlanPayload[];
     const plans = Array.isArray(body) ? body : (body.results ?? []);
-    return plans
-      .filter((plan) => plan.code !== "pilot")
-      .map((plan) => ({
-        ...plan,
-        features: Array.isArray(plan.features) ? plan.features.filter((feature) => Boolean(feature)) : [],
-      }));
+    return plans.filter((plan) => plan.code !== "pilot").map(normalizePlan);
   } catch {
     return null;
   }
 }
 
-export const PRO_PLAN = { code: "pro", price: "R$ 99/mês", students: 500 } as const;
+export type FaqEntry = { id: string; question: string; answer: string };
+
+/** Published FAQ for the marketing site. Drafts stay on the platform API. */
+export async function fetchFaq(locale: string, fetcher: typeof fetch = fetch): Promise<FaqEntry[] | null> {
+  try {
+    const params = new URLSearchParams({ locale });
+    const response = await fetcher(`${API_BASE_URL}/api/v1/support/faq/?${params}`, {
+      next: { revalidate: 300 },
+    });
+    if (!response.ok) return null;
+    const body = (await response.json()) as { results?: FaqEntry[] } | FaqEntry[];
+    const rows = Array.isArray(body) ? body : (body.results ?? []);
+    return rows.flatMap((item) =>
+      item && typeof item.question === "string" && item.question.trim() && typeof item.answer === "string"
+        ? [{ id: String(item.id), question: item.question, answer: item.answer }]
+        : [],
+    );
+  } catch {
+    return null;
+  }
+}
+
+export const PRO_PLAN_CODE = "pro";
 export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3001").replace(/\/$/, "");
 
 export type Modality = { title: string; text: string };

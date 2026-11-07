@@ -1,23 +1,6 @@
-import { fill } from "@/i18n/locale";
-import type { Messages } from "@/i18n/pt-BR";
 import { ptBR } from "@/i18n/pt-BR";
-import type { Plan } from "@/lib/api";
 
 export type FaqItem = { question: string; answer: string };
-
-export function marketingFaqItems(pro?: Plan, messages: Messages = ptBR): FaqItem[] {
-  const publishedFeatures = pro?.features?.filter(Boolean).slice(0, 4) ?? [];
-  const included = publishedFeatures.length
-    ? fill(messages.faq.proWithFeatures, { features: publishedFeatures.join(", ") })
-    : messages.faq.proFallback;
-
-  return [
-    { question: messages.faq.includedQuestion, answer: included },
-    { question: messages.faq.changeQuestion, answer: messages.faq.changeAnswer },
-    { question: messages.faq.appQuestion, answer: messages.faq.appAnswer },
-    { question: messages.faq.supportQuestion, answer: messages.faq.supportAnswer },
-  ];
-}
 
 export function MarketingFaq({ items, title = ptBR.faq.title }: { items: FaqItem[]; title?: string }) {
   const structuredData = {

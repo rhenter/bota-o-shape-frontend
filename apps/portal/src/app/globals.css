@@ -117,7 +117,7 @@ h2 {
   color: var(--muted);
 }
 .price {
-  font-size: 1.4rem;
+  font-size: 14px;
   font-weight: 700;
 }
 form.card {
@@ -150,18 +150,63 @@ input {
   border-radius: 8px;
   padding: 16px;
 }
-footer {
-  padding: 32px 0;
-  color: var(--muted);
+.site-footer {
+  padding: 28px 0 20px;
+  border-top: 6px solid var(--lime);
+  background: #031d34;
+  color: #dce6ef;
   font-size: 0.9rem;
+}
+.footer-main {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 32px;
+  align-items: center;
+}
+.footer-brand {
+  display: block;
+  height: 54px;
+  overflow: hidden;
+}
+.footer-brand .brand-logo {
+  width: 144px;
+  height: 54px;
+}
+.footer-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  align-items: center;
+  justify-content: center;
+}
+.site-footer a {
+  color: inherit;
+  text-decoration: none;
+}
+.site-footer a:hover {
+  color: var(--lime);
+}
+.footer-platform {
+  color: var(--lime) !important;
+  font-weight: 800;
+}
+.footer-bottom {
+  display: flex;
+  gap: 16px 28px;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #ffffff24;
+  color: #9eb0c1;
+  font-size: 0.8rem;
 }
 .public-contact-links {
   display: flex;
   flex-wrap: wrap;
   gap: 10px 18px;
-  margin-top: 8px;
 }
-.public-contact-links a { color: inherit; text-transform: capitalize; }
+.public-contact-links a { color: inherit; }
 .whatsapp-float {
   background: #168a45;
   border-radius: 999px;
@@ -173,6 +218,21 @@ footer {
   right: 20px;
   text-decoration: none;
   z-index: 20;
+}
+@media (max-width: 760px) {
+  .footer-main {
+    grid-template-columns: 1fr;
+    gap: 18px;
+    justify-items: center;
+  }
+  .footer-bottom {
+    align-items: center;
+    flex-direction: column;
+    text-align: center;
+  }
+  .public-contact-links {
+    justify-content: center;
+  }
 }
 .contact-page {
   display: grid;
@@ -809,14 +869,17 @@ header.top nav .btn.outline-nav {
 }
 .home-plan-card li {
   margin: 7px 0;
-  font-size: 0.82rem;
+  font-size: 0.95rem;
 }
-.home-plan-card li::before {
-  width: auto;
-  height: auto;
-  margin-right: 8px;
-  background: none;
-  color: var(--lime);
+.home-plan-card .plan-from {
+  margin: 8px 0 0;
+  color: #d7e4f0;
+  font-size: 0.95rem;
+}
+.home-plan-card .plan-from strong {
+  display: block;
+  margin-top: 2px;
+  color: #fff;
 }
 .home-faq h2 {
   font-size: 2rem;
@@ -1032,9 +1095,8 @@ header.top nav .btn.outline-nav {
 }
 .plans-layout {
   display: grid;
-  grid-template-columns: 0.8fr 1.2fr;
-  gap: 58px;
-  align-items: center;
+  gap: 40px;
+  align-items: start;
 }
 .plans-intro .eyebrow {
   background: #e7edf4;
@@ -1069,16 +1131,23 @@ header.top nav .btn.outline-nav {
   font-weight: 900;
 }
 .plans-result {
-  display: flex;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 18px;
+  align-items: stretch;
+  justify-items: center;
 }
 .plans-result > .error,
 .plans-result > .card {
+  grid-column: 1 / -1;
   max-width: 480px;
 }
 .plan-pro-card {
   position: relative;
+  display: flex;
+  flex-direction: column;
   width: min(100%, 460px);
+  height: 100%;
   padding: 34px;
   border: 2px solid #152f4a;
   border-radius: 16px;
@@ -1107,7 +1176,7 @@ header.top nav .btn.outline-nav {
 .plan-pro-card .price {
   display: block;
   margin: 20px 0 5px;
-  font-size: 2.8rem;
+  font-size: clamp(1.9rem, 3vw, 1.3rem);
 }
 .plan-pro-card .price small {
   font-size: 1rem;
@@ -1118,6 +1187,7 @@ header.top nav .btn.outline-nav {
 }
 .plan-pro-card ul {
   display: grid;
+  flex: 1;
   gap: 9px;
   padding: 0;
   list-style: none;

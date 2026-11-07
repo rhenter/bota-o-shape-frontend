@@ -19,14 +19,26 @@ export default async function SaasLayout({ children }: { children: ReactNode }) 
             <Link href="/produto">{nav.product}</Link>
             <Link href="/planos">{nav.plans}</Link>
             <Link href="/contato">{nav.contact}</Link>
-            <Link href="/#faq">{nav.help}</Link>
             <a href={`${ADMIN_URL}/entrar`} className="btn outline-nav">{nav.login}</a>
             <Link href="/cadastro" className="btn">{nav.start}</Link>
           </nav>
         </div>
       </header>
       <main id="conteudo">{children}</main>
-      <footer><div className="wrap">© Bota o Shape!<PublicContactLinks contact={contact} label={messages.contact.whatsapp} /></div></footer>
+      <footer className="site-footer">
+        <div className="wrap">
+          <div className="footer-main">
+            <Link href="/" className="footer-brand" aria-label={nav.brand}><BrandLogo /></Link>
+            <nav className="footer-nav" aria-label={nav.footer}>
+              <Link href="/">{nav.home}</Link>
+              <Link href="/produto">{nav.product}</Link>
+              <Link href="/planos">{nav.plans}</Link>
+              <Link href="/contato">{nav.contact}</Link>
+            </nav>
+            <a href={`${ADMIN_URL}/entrar`} className="footer-platform">{nav.platform}</a>
+          </div>
+        </div>
+      </footer>
     </>
   );
 }
