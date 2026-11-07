@@ -14,13 +14,13 @@
   <a href="README.md">English</a> | Português
 </p>
 
-> Monorepo frontend para a gestão de academias e o acompanhamento de seus alunos. O projeto combina um painel web profissional com um aplicativo nativo para alunos, ambos preparados para integrar com a API Bota o Shape.
+> Monorepo frontend para a gestão de academias e o acompanhamento de seus alunos. O projeto combina um painel web profissional, um site comercial, um console para operadores da plataforma e um aplicativo nativo para alunos. Cada cliente integra com a API Bota o Shape.
 
 ---
 
 ## 🚀 Funcionalidades
 
-### Painel administrativo em Next.js
+### Painel da academia em Next.js (`apps/gym_admin`)
 
 - [x] Autenticação, recuperação de senha, seleção de academia e acesso por função
 - [x] Gestão de alunos, equipe, exercícios e equipamentos
@@ -28,6 +28,19 @@
 - [x] Avaliações, medidas, relatórios e visualização da agenda
 - [x] Planos nutricionais, catálogo de alimentos, credenciais profissionais e cobrança
 - [x] Modo de demonstração explícito para exploração local
+
+### Portal comercial em Next.js (`apps/portal`)
+
+- [x] Página inicial, produto, planos, cadastro e contato
+- [x] Planos públicos e cadastro pela API
+- [x] Páginas de academia em domínios fora dos hosts do portal SaaS
+
+### Console da plataforma em Next.js (`apps/saas_admin`)
+
+- [x] Login de operador com sessão separada do painel da academia
+- [x] Lista e detalhe de contas, restritos por capabilities da plataforma
+- [x] Console de cobrança e configuração de MFA do operador
+- [ ] Métricas globais, suporte e configurações da plataforma (placeholders até essas APIs existirem)
 
 ### Aplicativo do aluno em Flutter
 
@@ -42,7 +55,9 @@
 
 ## 🛠️ Tecnologias Utilizadas
 
-### Painel web
+### Aplicações web
+
+O painel da academia, o portal comercial e o console da plataforma compartilham esta stack:
 
 - **[Next.js](https://nextjs.org)** 16.4.2
 - **[React](https://react.dev)** 19.3.1
@@ -65,7 +80,7 @@
 
 ## ⚙️ Pré-requisitos
 
-Para o painel administrativo:
+Para as aplicações web:
 
 - **[Node.js](https://nodejs.org)** 24.15.0 ou versão mais recente da linha 24.x
 - **[Corepack](https://nodejs.org/api/corepack.html)** com Yarn 4.4.1
@@ -75,7 +90,7 @@ Para o aplicativo do aluno:
 - **[Flutter](https://docs.flutter.dev/get-started/install)** 3.47.7 com Dart 3.13.5
 - Android Studio e/ou Xcode para builds nativos
 
-As aplicações usam o projeto irmão `bota-o-shape-api` para dados reais. Ambas também podem executar nos modos de demonstração explícitos descritos na documentação.
+As aplicações usam o projeto irmão `bota-o-shape-api` para dados reais. O painel da academia e o aplicativo do aluno também podem executar nos modos de demonstração explícitos descritos abaixo.
 
 ---
 
@@ -99,13 +114,13 @@ make setup
 
 `run` inicia uma aplicação para uso local e mantém o processo em execução durante o desenvolvimento. `build` compila e otimiza uma aplicação para gerar os artefatos de produção; ele não inicia a aplicação. O setup confere os runners Android/iOS do Flutter, baixa as dependências e cria `apps/gym_admin/.env.local` caso o arquivo ainda não exista.
 
-### 3. Execute o painel administrativo em Next.js
+### 3. Execute o painel da academia
 
 ```bash
 make portal-run
 ```
 
-Acesse [http://localhost:3000](http://localhost:3000). O endereço padrão da API é `http://127.0.0.1:8006`; altere `API_BASE_URL` em `apps/gym_admin/.env.local` quando necessário. O portal encaminha `/api/*` pelo servidor Next.js para que a autenticação local não dependa da configuração de CORS do navegador.
+Acesse [http://localhost:3000](http://localhost:3000). O endereço padrão da API é `http://127.0.0.1:8006`. Altere `API_BASE_URL` em `apps/gym_admin/.env.local` quando necessário. O painel encaminha `/api/*` pelo servidor Next.js para que a autenticação local não dependa da configuração de CORS do navegador.
 
 Para usar dados locais de demonstração:
 
@@ -122,7 +137,41 @@ make portal-start
 
 Use `make portal-check` para executar o lint, a verificação de tipos e os testes.
 
-### 4. Execute o aplicativo Flutter
+### 4. Execute o portal comercial
+
+```bash
+make portal-saas-run
+```
+
+Acesse [http://localhost:3001](http://localhost:3001). Copie `apps/portal/.env.example` para `apps/portal/.env.local` quando precisar alterar a API, a URL do painel (`NEXT_PUBLIC_ADMIN_URL`), a URL pública do site ou `PORTAL_HOSTS`. Os hosts listados em `PORTAL_HOSTS` servem o site comercial. Qualquer outro host é resolvido como domínio personalizado de uma academia.
+
+Para criar e executar um build otimizado de produção:
+
+```bash
+make portal-saas-build
+make portal-saas-start
+```
+
+Use `make portal-saas-check` para executar o lint, a verificação de tipos e os testes.
+
+### 5. Execute o console dos operadores
+
+```bash
+make saas-run
+```
+
+Acesse [http://localhost:3002](http://localhost:3002). O endereço padrão da API é `http://127.0.0.1:8006`. Informe `API_BASE_URL` no alvo do Make quando a API estiver em outro endereço. O console faz proxy de `/api/*` no servidor e mantém a sessão separada do painel da academia. Entre com uma conta de operador da plataforma.
+
+Para criar e executar um build otimizado de produção:
+
+```bash
+make saas-build
+make saas-start
+```
+
+Use `make saas-check` para executar o lint, a verificação de tipos e os testes.
+
+### 6. Execute o aplicativo Flutter
 
 Conecte um dispositivo Android/iOS ou inicie um emulador/simulador e execute:
 

@@ -14,13 +14,13 @@
   English | <a href="README.pt.md">Português</a>
 </p>
 
-> A frontend monorepo for managing fitness businesses and supporting their students. It combines a professional web dashboard with a native student app, both designed to integrate with the Bota o Shape API.
+> A frontend monorepo for managing fitness businesses and supporting their students. It combines a professional web dashboard, a commercial site, a platform operator console, and a native student app. Each client integrates with the Bota o Shape API.
 
 ---
 
 ## 🚀 Features
 
-### Next.js admin dashboard
+### Next.js gym dashboard (`apps/gym_admin`)
 
 - [x] Authentication, password recovery, tenant selection, and role-based access
 - [x] Student, staff, exercise, and equipment management
@@ -28,6 +28,19 @@
 - [x] Assessments, measurements, reports, and scheduling views
 - [x] Nutrition plans, food catalog, professional credentials, and billing views
 - [x] Explicit demo mode for local product exploration
+
+### Next.js commercial portal (`apps/portal`)
+
+- [x] Marketing home, product page, plans, signup, and contact
+- [x] Public plans and signup through the API
+- [x] Academy pages on custom hosts outside the SaaS portal hosts
+
+### Next.js platform console (`apps/saas_admin`)
+
+- [x] Operator sign-in with a session separate from the gym dashboard
+- [x] Account list and account detail, gated by platform capabilities
+- [x] Billing console and operator MFA settings
+- [ ] Global metrics, support, and platform settings (placeholders until those APIs exist)
 
 ### Flutter student app
 
@@ -42,7 +55,9 @@
 
 ## 🛠️ Technologies
 
-### Admin web
+### Web applications
+
+The gym dashboard, commercial portal, and platform console share this stack:
 
 - **[Next.js](https://nextjs.org)** 16.4.2
 - **[React](https://react.dev)** 19.3.1
@@ -65,7 +80,7 @@
 
 ## ⚙️ Prerequisites
 
-For the admin dashboard:
+For the web applications:
 
 - **[Node.js](https://nodejs.org)** 24.15.0 or a newer 24.x release
 - **[Corepack](https://nodejs.org/api/corepack.html)** with Yarn 4.4.1
@@ -75,7 +90,7 @@ For the student app:
 - **[Flutter](https://docs.flutter.dev/get-started/install)** 3.47.7 with Dart 3.13.5
 - Android Studio and/or Xcode for native builds
 
-The applications use the sibling `bota-o-shape-api` project for live data. Both can also run in explicit demo modes where documented.
+The applications use the sibling `bota-o-shape-api` project for live data. The gym dashboard and the student app can also run in the explicit demo modes documented below.
 
 ---
 
@@ -99,13 +114,13 @@ make setup
 
 `run` starts an application for local use and keeps the process running while you develop. `build` compiles and optimizes an application into production artifacts; it does not start the application. Setup checks the Flutter Android/iOS runners, downloads dependencies, and creates `apps/gym_admin/.env.local` when it does not exist.
 
-### 3. Run the Next.js admin dashboard
+### 3. Run the gym dashboard
 
 ```bash
 make portal-run
 ```
 
-Open [http://localhost:3000](http://localhost:3000). The default API address is `http://127.0.0.1:8006`; change `API_BASE_URL` in `apps/gym_admin/.env.local` when necessary. The portal sends `/api/*` through the Next.js server so local authentication does not depend on browser CORS configuration.
+Open [http://localhost:3000](http://localhost:3000). The default API address is `http://127.0.0.1:8006`. Change `API_BASE_URL` in `apps/gym_admin/.env.local` when necessary. The dashboard sends `/api/*` through the Next.js server so local authentication does not depend on browser CORS configuration.
 
 To use local demo data:
 
@@ -122,7 +137,41 @@ make portal-start
 
 Use `make portal-check` to run linting, type checking, and tests.
 
-### 4. Run the Flutter student app
+### 4. Run the commercial portal
+
+```bash
+make portal-saas-run
+```
+
+Open [http://localhost:3001](http://localhost:3001). Copy `apps/portal/.env.example` to `apps/portal/.env.local` when you need to change the API, the gym dashboard URL (`NEXT_PUBLIC_ADMIN_URL`), the public site URL, or `PORTAL_HOSTS`. Hosts listed in `PORTAL_HOSTS` serve the commercial site. Any other host is resolved as an academy custom domain.
+
+To create and run an optimized production build:
+
+```bash
+make portal-saas-build
+make portal-saas-start
+```
+
+Use `make portal-saas-check` to run linting, type checking, and tests.
+
+### 5. Run the platform operator console
+
+```bash
+make saas-run
+```
+
+Open [http://localhost:3002](http://localhost:3002). The default API address is `http://127.0.0.1:8006`. Pass `API_BASE_URL` to the Make target when the API is elsewhere. The console proxies `/api/*` on the server and keeps its session separate from the gym dashboard. Sign in with a platform operator account.
+
+To create and run an optimized production build:
+
+```bash
+make saas-build
+make saas-start
+```
+
+Use `make saas-check` to run linting, type checking, and tests.
+
+### 6. Run the Flutter student app
 
 Connect an Android/iOS device or start an emulator/simulator, then run:
 

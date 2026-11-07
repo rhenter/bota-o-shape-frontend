@@ -1,28 +1,38 @@
 API_BASE_URL ?= http://127.0.0.1:8006/
 XCODE_DEVELOPER_DIR ?= /Applications/Xcode.app/Contents/Developer
 
-.PHONY: help setup portal-setup portal-run portal-demo portal-build portal-start portal-check portal-saas-run portal-saas-build portal-saas-check \
+.PHONY: help setup portal-setup portal-run portal-demo portal-build portal-start portal-check \
+	portal-saas-run portal-saas-build portal-saas-start portal-saas-check \
+	saas-run saas-build saas-start saas-check \
 	student-setup student-ensure-android student-ensure-ios student-ensure-xcode student-run student-demo \
 	student-build-android student-build-ios student-check
 
 help:
 	@echo "Available commands:"
-	@echo "  make setup                  Install portal and student app dependencies"
-	@echo "  make portal-run             Run the portal in development mode"
-	@echo "  make portal-demo            Run the portal with demo data"
-	@echo "  make portal-build           Create the portal production build"
-	@echo "  make portal-start           Run the previously built portal"
-	@echo "  make portal-check           Run portal lint and tests"
-	@echo "  make portal-saas-run               Run the commercial portal (landing, plans, signup) on :3001"
-	@echo "  make portal-saas-check             Run commercial portal lint and tests"
+	@echo "  make setup                  Install web and student app dependencies"
+	@echo "  make portal-run             Run the gym dashboard on :3000"
+	@echo "  make portal-demo            Run the gym dashboard with demo data"
+	@echo "  make portal-build           Create the gym dashboard production build"
+	@echo "  make portal-start           Run the previously built gym dashboard"
+	@echo "  make portal-check           Run gym dashboard lint and tests"
+	@echo "  make portal-saas-run        Run the commercial portal on :3001"
+	@echo "  make portal-saas-build      Create the commercial portal production build"
+	@echo "  make portal-saas-start      Run the previously built commercial portal"
+	@echo "  make portal-saas-check      Run commercial portal lint and tests"
+	@echo "  make saas-run               Run the platform operator console on :3002"
+	@echo "  make saas-build             Create the platform console production build"
+	@echo "  make saas-start             Run the previously built platform console"
+	@echo "  make saas-check             Run platform console lint and tests"
 	@echo "  make student-run            Run the Flutter app"
 	@echo "  make student-demo           Run the Flutter app with demo data enabled"
 	@echo "  make student-build-android  Create the Android APK"
 	@echo "  make student-build-ios      Create the iOS simulator app"
 	@echo "  make student-check          Format, analyze, and test the Flutter app"
 	@echo ""
-	@echo "Set the portal and student API URL with API_BASE_URL, for example:"
+	@echo "Set the API URL with API_BASE_URL, for example:"
 	@echo "  make portal-run API_BASE_URL=https://api.example.com/"
+	@echo "  make portal-saas-run API_BASE_URL=https://api.example.com/"
+	@echo "  make saas-run API_BASE_URL=https://api.example.com/"
 	@echo "  make student-run API_BASE_URL=https://api.example.com/"
 	@echo "Set a custom Xcode path with XCODE_DEVELOPER_DIR when needed."
 
@@ -55,9 +65,25 @@ portal-saas-run:
 portal-saas-build:
 	API_BASE_URL="$(API_BASE_URL)" yarn workspace @bota-o-shape/portal build
 
+portal-saas-start:
+	API_BASE_URL="$(API_BASE_URL)" yarn workspace @bota-o-shape/portal start
+
 portal-saas-check:
 	yarn workspace @bota-o-shape/portal lint
 	yarn workspace @bota-o-shape/portal test
+
+saas-run:
+	API_BASE_URL="$(API_BASE_URL)" yarn saas:dev
+
+saas-build:
+	API_BASE_URL="$(API_BASE_URL)" yarn saas:build
+
+saas-start:
+	API_BASE_URL="$(API_BASE_URL)" yarn workspace @bota-o-shape/saas-admin start
+
+saas-check:
+	yarn saas:lint
+	yarn saas:test
 
 student-setup: student-ensure-android student-ensure-ios
 	cd apps/student && flutter pub get
