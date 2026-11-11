@@ -903,6 +903,23 @@ dd {
   max-width: 420px;
 }
 
+.support-filters {
+  grid-template-columns: repeat(7, minmax(0, 1fr)) auto;
+}
+
+.support-filters label:first-child {
+  grid-column: span 2;
+}
+
+.tab-count {
+  margin-left: 6px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.console-tab.is-active .tab-count {
+  color: #3e5e0d;
+}
 
 .info-banner {
   margin: 0;
@@ -1427,6 +1444,10 @@ dd {
 
   .filters, .detail-grid, .support-layout, .period-filter, .financial-grid, .summary-grid.compact, .subscription-filters {
     grid-template-columns: 1fr;
+  }
+
+  .support-filters label:first-child {
+    grid-column: auto;
   }
 
   .period-banner, .section-intro {
