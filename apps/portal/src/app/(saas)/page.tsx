@@ -5,6 +5,7 @@ import { MarketingFaq } from "@/components/marketing-faq";
 import type { Messages } from "@/i18n/pt-BR";
 import { getLocale, getMessages } from "@/i18n/server";
 import { fetchFaq, fetchPlans, SITE_URL, type Plan } from "@/lib/api";
+import { portugueseSocial } from "@/lib/social-metadata";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { meta } = await getMessages();
@@ -12,8 +13,7 @@ export async function generateMetadata(): Promise<Metadata> {
     title: meta.homeTitle,
     description: meta.homeDescription,
     alternates: { canonical: "/" },
-    openGraph: { url: "/", title: meta.homeOgTitle },
-    twitter: { card: "summary", title: meta.homeOgTitle, description: meta.homeTwitterDescription },
+    ...portugueseSocial("home"),
   };
 }
 export const revalidate = 300;

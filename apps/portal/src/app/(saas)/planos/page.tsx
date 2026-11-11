@@ -4,6 +4,7 @@ import { fill } from "@/i18n/locale";
 import { getMessages } from "@/i18n/server";
 import { fetchPlans, type Plan } from "@/lib/api";
 import { visiblePlanFeatures } from "@/lib/plan-features";
+import { portugueseSocial } from "@/lib/social-metadata";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { meta } = await getMessages();
@@ -11,8 +12,7 @@ export async function generateMetadata(): Promise<Metadata> {
     title: meta.plansTitle,
     description: meta.plansDescription,
     alternates: { canonical: "/planos" },
-    openGraph: { url: "/planos", title: meta.plansOgTitle },
-    twitter: { card: "summary", title: meta.plansOgTitle, description: meta.plansTwitterDescription },
+    ...portugueseSocial("plans"),
   };
 }
 export const revalidate = 300;

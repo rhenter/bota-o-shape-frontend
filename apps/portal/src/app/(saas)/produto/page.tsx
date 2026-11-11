@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ProductShowcase } from "@/components/product-showcase";
 import { getMessages } from "@/i18n/server";
+import { portugueseSocial } from "@/lib/social-metadata";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { meta } = await getMessages();
@@ -9,8 +10,7 @@ export async function generateMetadata(): Promise<Metadata> {
     title: meta.productTitle,
     description: meta.productDescription,
     alternates: { canonical: "/produto" },
-    openGraph: { url: "/produto", title: meta.productOgTitle },
-    twitter: { card: "summary", title: meta.productOgTitle, description: meta.productTwitterDescription },
+    ...portugueseSocial("product"),
   };
 }
 

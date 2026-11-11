@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getMessages } from "@/i18n/server";
+import { portugueseSocial } from "@/lib/social-metadata";
 import { SignupForm } from "./signup-form";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -7,8 +8,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: meta.signupTitle,
     alternates: { canonical: "/cadastro" },
-    openGraph: { url: "/cadastro", title: meta.signupOgTitle },
-    twitter: { card: "summary", title: meta.signupOgTitle, description: meta.signupTwitterDescription },
+    ...portugueseSocial("signup"),
   };
 }
 

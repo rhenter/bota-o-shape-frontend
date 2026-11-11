@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ContactForm } from "@/components/contact-form";
 import { getMessages } from "@/i18n/server";
+import { portugueseSocial } from "@/lib/social-metadata";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { meta } = await getMessages();
@@ -8,8 +9,7 @@ export async function generateMetadata(): Promise<Metadata> {
     title: meta.contactTitle,
     description: meta.contactDescription,
     alternates: { canonical: "/contato" },
-    openGraph: { url: "/contato", title: meta.contactOgTitle, description: meta.contactOgDescription },
-    twitter: { card: "summary", title: meta.contactOgTitle, description: meta.contactTwitterDescription },
+    ...portugueseSocial("contact"),
   };
 }
 

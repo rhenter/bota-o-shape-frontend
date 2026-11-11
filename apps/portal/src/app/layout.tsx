@@ -4,6 +4,7 @@ import "./globals.css";
 import { I18nProvider } from "@/i18n/provider";
 import { getLocale, getMessages } from "@/i18n/server";
 import { SITE_URL } from "@/lib/api";
+import { portugueseSocial } from "@/lib/social-metadata";
 
 export async function generateMetadata(): Promise<Metadata> {
   const messages = await getMessages();
@@ -11,12 +12,7 @@ export async function generateMetadata(): Promise<Metadata> {
     metadataBase: new URL(SITE_URL),
     title: { default: messages.meta.siteTitle, template: "%s · Bota o Shape!" },
     description: messages.meta.siteDescription,
-    openGraph: { siteName: "Bota o Shape!", type: "website", locale: messages.meta.ogLocale },
-    twitter: {
-      card: "summary",
-      title: messages.meta.siteTitle,
-      description: messages.meta.siteDescription,
-    },
+    ...portugueseSocial("site"),
   };
 }
 
