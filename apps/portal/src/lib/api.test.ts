@@ -27,7 +27,7 @@ describe("fetchPlans", () => {
           id: "1",
           code: "start",
           name: "Start",
-          current_version: { features: ["workouts"], limits: { active_students: 300 }, price_reference: "R$ 199,00/mês" },
+          current_version: { features: { has_workouts: true }, limits: { active_students: 300 }, price_reference: "R$ 199,00/mês" },
         }],
       }),
     });

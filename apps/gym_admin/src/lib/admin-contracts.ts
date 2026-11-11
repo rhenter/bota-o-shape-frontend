@@ -100,10 +100,32 @@ export interface ApiMealPlan extends Omit<MealPlanInput, "draft"> {
   status: "draft" | "published" | "paused" | "superseded";
   versions: ApiMealVersion[];
 }
+/** Feature flags as published by the billing plan version API. */
+export type ApiPlanFeatures = Record<
+  | "has_student_app"
+  | "has_workouts"
+  | "has_assessments"
+  | "has_nutrition"
+  | "has_reports_metrics"
+  | "has_priority_support"
+  | "has_multiple_units"
+  | "has_landing_page"
+  | "has_landing_page_custom",
+  boolean
+>;
+
+/** Names of the features enabled in the `has_*` flag map. */
+export function activePlanFeatureNames(features: ApiPlanFeatures | undefined): string[] {
+  if (!features) return [];
+  return Object.entries(features)
+    .filter(([, enabled]) => enabled === true)
+    .map(([key]) => key.replace(/^has_/, ""));
+}
+
 export interface ApiBillingPlan {
   id: string;
   name: string;
-  features: string[];
+  features: ApiPlanFeatures;
   limits: Record<string, number>;
   price_reference: string;
 }

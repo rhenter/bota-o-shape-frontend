@@ -57,7 +57,7 @@ function mockApi(roles: ApiRole[]) {
             id: "plan",
             name: "Plano da academia",
             price_reference: "",
-            features: ["nutrition"],
+            features: { has_nutrition: true },
             limits: { students: 100 },
           },
           billing_cycle: "monthly",

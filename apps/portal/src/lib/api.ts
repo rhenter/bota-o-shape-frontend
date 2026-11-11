@@ -1,5 +1,19 @@
 import { ptBR, type Messages } from "@/i18n/pt-BR";
 
+/** The API returns a fixed `has_*` feature-flag map instead of a code list. */
+export type PlanFeatureFlags = Record<
+  | "has_student_app"
+  | "has_workouts"
+  | "has_assessments"
+  | "has_nutrition"
+  | "has_reports_metrics"
+  | "has_priority_support"
+  | "has_multiple_units"
+  | "has_landing_page"
+  | "has_landing_page_custom",
+  boolean
+>;
+
 export type Plan = {
   id: string;
   code: string;
@@ -9,24 +23,40 @@ export type Plan = {
   price_reference: string;
 };
 
-type PlanPayload = Plan & {
+type PlanPayload = Omit<Plan, "features" | "limits" | "price_reference"> & {
+  features?: PlanFeatureFlags | string[];
+  limits?: Record<string, unknown>;
+  price_reference?: string;
   current_version?: {
-    features?: string[];
+    features?: PlanFeatureFlags | string[];
     limits?: Record<string, unknown>;
     price_reference?: string;
+    monthly_price_minor?: number;
+    currency?: string;
   } | null;
 };
+
+/** Reads enabled feature codes from the new `has_*` flag map, tolerating a legacy code list. */
+function featureCodesFrom(raw: unknown): string[] {
+  if (Array.isArray(raw)) {
+    return raw.filter((value): value is string => typeof value === "string" && value.trim() !== "");
+  }
+  if (!raw || typeof raw !== "object") return [];
+  return Object.entries(raw as Record<string, unknown>)
+    .filter(([, value]) => value === true)
+    .map(([key]) => (key.startsWith("has_") ? key.slice(4) : key));
+}
 
 /** Published commercial fields live on current_version; older payloads put them on the plan. */
 function normalizePlan(plan: PlanPayload): Plan {
   const version = plan.current_version;
-  const features = version?.features ?? plan.features;
+  const features = featureCodesFrom(version?.features ?? plan.features);
   const limits = version?.limits ?? plan.limits;
   return {
     id: plan.id,
     code: plan.code,
     name: plan.name,
-    features: Array.isArray(features) ? features.filter((feature) => Boolean(feature)) : [],
+    features,
     limits: limits && typeof limits === "object" ? limits : {},
     price_reference: version?.price_reference ?? plan.price_reference ?? "",
   };

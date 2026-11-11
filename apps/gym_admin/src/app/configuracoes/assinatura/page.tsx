@@ -7,6 +7,7 @@ import { LoadingState, ErrorState, EmptyState } from "@/components/states";
 import { canManageBilling } from "@/lib/permissions";
 import {
   hostedUrl,
+  activePlanFeatureNames,
   type ApiSubscription,
   type ApiInvoice,
   type ApiEntitlement,
@@ -211,7 +212,7 @@ function BillingContent() {
             </p>
           )}
           <h3>Recursos contratados</h3>
-          <p>{s.plan_detail.features.join(", ") || "Não informados"}</p>
+          <p>{activePlanFeatureNames(s.plan_detail.features).join(", ") || "Não informados"}</p>
           <ul className="record-list">
             {Object.entries(s.plan_detail.limits).map(([key, limit]) => (
               <li key={key}>
