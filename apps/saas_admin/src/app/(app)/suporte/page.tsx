@@ -1,5 +1,5 @@
-import { PlaceholderPage } from "@/components/placeholder-page";
+import { SupportConsole } from "@/components/support-console";
 
 export default function SupportPage() {
-  return <PlaceholderPage title="Suporte" description="Atendimento global será conectado quando os endpoints de suporte estiverem disponíveis." capability="support.manage" />;
+  return <SupportConsole />;
 }

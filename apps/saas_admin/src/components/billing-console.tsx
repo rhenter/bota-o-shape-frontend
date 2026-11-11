@@ -10,6 +10,22 @@ import {
   type PlatformPlan,
 } from "@/lib/platform-api";
 
+function latestPlanVersion(plan: PlatformPlan) {
+  return plan.versions.reduce<PlatformPlan["versions"][number] | undefined>(
+    (latest, version) => (!latest || version.version > latest.version ? version : latest),
+    undefined,
+  );
+}
+
+function latestPlanLabel(plan: PlatformPlan) {
+  const version = latestPlanVersion(plan);
+  if (!version) return "Sem versão";
+  const price = version.monthly_price_minor
+    ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: version.currency }).format(version.monthly_price_minor / 100)
+    : version.price_reference || "sem preço";
+  return `v${version.version} · ${price}`;
+}
+
 export function BillingConsole() {
   const { membership } = useAuth();
   const allowed = Boolean(membership && hasCapability(membership, "billing.manage"));
@@ -86,7 +102,7 @@ export function BillingConsole() {
               <div className="command-grid">{plans.map((plan) => <button className="button" key={plan.id} onClick={() => void run("change-plan", { plan_code: plan.code })}>Alterar para {plan.name}</button>)}</div>
               <div className="command-grid"><button className="button" onClick={() => void run("set-limit", { key: "active_students", limit: 500 })}>Override 500 alunos</button><button className="button" onClick={() => void run("remove-limit", { key: "active_students" })}>Remover override</button></div>
             </section>
-            <section className="page-card"><h2>Planos e versões publicadas</h2>{plans.map((plan) => <div className="plan-row" key={plan.id}><strong>{plan.name}</strong><span>{plan.versions.map((version) => `v${version.version} · ${version.price_reference || "sem preço"}`).join(" | ")}</span><button className="button" onClick={() => { if (reason.length >= 10 && window.confirm(`Publicar nova versão de ${plan.name}?`)) void platformApi.publishPlan(plan.id, { reason, features: plan.versions[0]?.features ?? [], limits: plan.versions[0]?.limits ?? {}, price_reference: plan.versions[0]?.price_reference ?? "" }).then(load).catch((caught) => setError(caught instanceof Error ? caught.message : "Erro ao publicar.")); }}>Publicar nova versão</button></div>)}</section>
+            <section className="page-card"><h2>Planos e versões publicadas</h2>{plans.map((plan) => <div className="plan-row" key={plan.id}><strong>{plan.name}</strong><span>{latestPlanLabel(plan)}</span><button className="button" onClick={() => { const latest = latestPlanVersion(plan); if (reason.length >= 10 && latest && window.confirm(`Publicar nova versão de ${plan.name}?`)) void platformApi.publishPlan(plan.id, { reason, features: latest.features, limits: latest.limits, price_reference: latest.price_reference, monthly_price_minor: latest.monthly_price_minor, currency: latest.currency }).then(load).catch((caught) => setError(caught instanceof Error ? caught.message : "Erro ao publicar.")); }}>Publicar nova versão</button></div>)}</section>
             {account && <section className="page-card"><h2>Faturas recentes</h2>{account.invoices.length ? <ul className="invoice-list">{account.invoices.slice(0, 10).map((invoice) => <li key={invoice.id}><span><strong>{new Intl.NumberFormat("pt-BR", { style: "currency", currency: invoice.currency }).format(invoice.amount_minor / 100)}</strong><small>{invoice.status}</small></span></li>)}</ul> : <p>Nenhuma fatura.</p>}</section>}
           </>
         )}

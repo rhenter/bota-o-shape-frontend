@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
@@ -53,6 +54,14 @@ export function LoginForm() {
 
   return (
     <form className="auth-card" onSubmit={submit}>
+      <Image
+        className="auth-logo"
+        src="/brand/logo-light.png"
+        alt="Bota o Shape!"
+        width={1536}
+        height={1024}
+        priority
+      />
       <p className="eyebrow">ACESSO RESTRITO</p>
       <h1>{stage === "credentials" ? "SaaS Admin" : "Confirme sua identidade"}</h1>
       <p>
