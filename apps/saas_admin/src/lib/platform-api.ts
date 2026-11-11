@@ -6,7 +6,14 @@ export interface PlatformTokens {
 export type PlatformCapability =
   | "platform.manage"
   | "accounts.read"
+  | "subscriptions.read"
+  | "plans.manage"
   | "billing.manage"
+  | "charges.read"
+  | "finance.read"
+  | "operations.read"
+  | "integrations.manage"
+  | "legal.manage"
   | "support.manage"
   | "settings.manage"
   | "audit.read";
@@ -56,8 +63,10 @@ export interface PlatformAccount {
       code: string;
       name: string;
       version: number;
-      features: string[];
+      features: PlanFeatures;
       limits: Record<string, number>;
+      monthly_price_minor: number;
+      currency: string;
       is_active: boolean;
     };
   };
@@ -101,12 +110,27 @@ export interface AccountFilters {
   offset?: number;
 }
 
+/** Published feature flags. The API returns a fixed set of `has_*` booleans. */
+export interface PlanFeatures {
+  has_student_app: boolean;
+  has_workouts: boolean;
+  has_assessments: boolean;
+  has_nutrition: boolean;
+  has_reports_metrics: boolean;
+  has_priority_support: boolean;
+  has_multiple_units: boolean;
+  has_landing_page: boolean;
+  has_landing_page_custom: boolean;
+}
+
 export interface PlatformPlanVersion {
   id: string;
   version: number;
-  features: string[];
+  features: PlanFeatures;
   limits: Record<string, number>;
   price_reference: string;
+  monthly_price_minor: number;
+  currency: string;
   published_at: string;
 }
 
@@ -116,6 +140,7 @@ export interface PlatformPlan {
   name: string;
   is_active: boolean;
   versions: PlatformPlanVersion[];
+  sort_order: number;
 }
 
 export interface SupportTicket {
@@ -127,6 +152,47 @@ export interface SupportTicket {
   messages: Array<{ id: string; channel: "email" | "whatsapp"; body: string; outbound: boolean; created_at: string }>;
   notes: Array<{ id: string; body: string; author_id: string; created_at: string }>;
 }
+
+export interface PlatformDashboard {
+  period: { start: string; end: string; updated_at: string };
+  financial: { mrr: Record<string, number>; received: Record<string, number>; overdue: Record<string, number> };
+  accounts: { total: number; active: number };
+  memberships: { total: number; active: number };
+  subscriptions: { total: number; by_status: Record<string, number> };
+  invoices: { total: number; amount_minor: number; by_status: Record<string, number> };
+  support: { open: number; urgent: number };
+  limitations: string[];
+}
+
+export interface PlatformInvitation {
+  id: string; email: string; role: PlatformMembership["role"];
+  capabilities: PlatformCapability[]; expires_at: string; accepted_at: string | null;
+  invited_by_email: string; created_at: string;
+}
+
+export interface PlatformAuditEvent {
+  id: string; created_at: string; actor_email: string | null; action: string;
+  target_type: string; target_id: string; tenant_id: string | null;
+  tenant_name: string | null; metadata: Record<string, unknown>; ip_address: string | null;
+}
+
+export interface PlatformUserRecord { id: string; email: string; name: string; is_active: boolean; last_login: string | null; date_joined: string; memberships: Array<{ id: string; tenant_id: string; tenant_name: string; status: string; roles: string[] }> }
+export interface PlatformSubscriptionRecord {
+  id: string; account_id: string; account_name: string; account_is_active: boolean;
+  modality: "paid" | "trial" | "beta"; status: string; billing_cycle: string;
+  plan_version: { id: string; version: number; price_reference: string; monthly_price_minor: number; currency: string; features: PlanFeatures; limits: Record<string, number>; plan: { id: string; code: string; name: string } };
+  cycle_start: string | null; cycle_end: string | null; current_period_start: string | null;
+  current_period_end: string | null; paid_through: string | null; next_due_date: string | null;
+  cancel_at: string | null; renewal_state: string; collection_mode: string; invoice_count: number;
+}
+export interface PlatformCommercial { beta: Array<{ tenant_id: string; tenant_name: string; plan: string; status: string; enabled: boolean }>; trials: Array<{ id: string; tenant_id: string; tenant_name: string; status: string; ends_at: string | null; retention_state: string }> }
+export interface PlatformFinance { charges: Array<{ id: string; tenant_id: string; tenant_name: string; status: string; currency: string; amount_minor: number; due_at: string | null; hosted_url: string; created_at: string; attempts: Array<{ id: string; status: string; failure_code: string; processed_at: string | null }> }>; received: Record<string, number>; overdue: Record<string, number> }
+export interface PlatformOperations { alerts: { billing_errors: number; failed_payments: number; unread_contacts: number }; events: Array<{ id: string; provider: string; event_type: string; tenant_name: string | null; processed_at: string | null; error: string; created_at: string }>; failed_payments: Array<{ id: string; tenant_name: string; invoice_id: string; status: string; failure_code: string; processed_at: string | null }> }
+export interface PlatformLegal { documents: Array<{ id: string; kind: "terms" | "privacy"; version: number; text: string; published_at: string }>; data_requests: Array<{ id: string; tenant_name: string; subject_email: string; kind: string; status: string; retention_reason: string; created_at: string }> }
+export interface PlatformIntegrations { billing_providers: Array<{ provider: string; accounts: number }>; email: { configured: boolean; transport: string | null; host: string }; webhooks: { events_total: number; errors: number } }
+export interface PlatformContact { id: string; name: string; email: string; phone: string; subject: string; contact_type: string; message: string; status: string; is_read: boolean; source: string; created_at: string }
+export interface ManagedFaq { id: string; question: string; answer: string; category: string; audience: string; locale: string; sort_order: number; is_published: boolean; updated_at: string }
+export interface SupportContactSettings { whatsapp_number: string; whatsapp_enabled: boolean; whatsapp_prefill_default: string }
 
 interface ApiErrorPayload {
   detail?: string;
@@ -223,6 +289,8 @@ export class PlatformApi {
           false,
         );
       }
+    } catch {
+      // Local logout must still complete when the server session already expired.
     } finally {
       this.clearSession();
     }
@@ -231,6 +299,64 @@ export class PlatformApi {
   me() {
     return this.request<PlatformMembership>("/api/v1/platform/auth/me/");
   }
+
+  dashboard(period?: { start: string; end: string }) {
+    const query = period ? `?${new URLSearchParams(period)}` : "";
+    return this.request<PlatformDashboard>(`/api/v1/platform/dashboard/${query}`);
+  }
+
+  memberships() {
+    return this.request<PlatformMembership[]>("/api/v1/platform/auth/memberships/");
+  }
+
+  invitations() {
+    return this.request<PlatformInvitation[]>("/api/v1/platform/auth/invitations/");
+  }
+
+  invite(payload: { email: string; role: PlatformMembership["role"]; capabilities: PlatformCapability[] }) {
+    return this.request<{ id: string }>("/api/v1/platform/auth/invitations/", {
+      method: "POST", body: JSON.stringify(payload),
+    });
+  }
+
+  acceptInvitation(payload: { token: string; password: string; first_name: string; last_name: string }) {
+    return this.request<PlatformMembership>("/api/v1/platform/auth/invitations/accept/", {
+      method: "POST", body: JSON.stringify(payload),
+    }, false);
+  }
+
+  updateMembership(id: string, payload: Partial<Pick<PlatformMembership, "role" | "capabilities" | "is_active">>) {
+    return this.request<PlatformMembership>(`/api/v1/platform/auth/memberships/${id}/`, {
+      method: "PATCH", body: JSON.stringify(payload),
+    });
+  }
+
+  audit(filters: { search?: string; action?: string; limit?: number; offset?: number } = {}) {
+    const query = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => value !== undefined && value !== "" && query.set(key, String(value)));
+    return this.request<PlatformPage<PlatformAuditEvent>>(`/api/v1/platform/audit/?${query}`);
+  }
+
+  users() { return this.request<PlatformUserRecord[]>("/api/v1/platform/users/"); }
+  subscriptions(filters: { account_id?: string; status?: string; modality?: string; plan_id?: string; limit?: number; offset?: number } = {}) {
+    const query = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => value !== undefined && value !== "" && query.set(key, String(value)));
+    return this.request<PlatformPage<PlatformSubscriptionRecord>>(`/api/v1/platform/subscriptions/?${query}`);
+  }
+  subscription(id: string) { return this.request<PlatformSubscriptionRecord>(`/api/v1/platform/subscriptions/${id}/`); }
+  commercial() { return this.request<PlatformCommercial>("/api/v1/platform/commercial/"); }
+  updateBeta(tenantId: string, enabled: boolean, reason: string) { return this.request<{ tenant_id: string; enabled: boolean }>("/api/v1/platform/commercial/", { method: "POST", body: JSON.stringify({ tenant_id: tenantId, enabled, reason }) }); }
+  finance() { return this.request<PlatformFinance>("/api/v1/platform/finance/"); }
+  receivables() { return this.request<PlatformFinance>("/api/v1/platform/receivables/"); }
+  operations() { return this.request<PlatformOperations>("/api/v1/platform/operations/"); }
+  legal() { return this.request<PlatformLegal>("/api/v1/platform/legal/"); }
+  publishLegal(payload: { kind: "terms" | "privacy"; version: number; text: string }) { return this.request<{ id: string; kind: string; version: number }>("/api/v1/platform/legal/", { method: "POST", body: JSON.stringify(payload) }); }
+  integrations() { return this.request<PlatformIntegrations>("/api/v1/platform/integrations/"); }
+  contacts() { return this.request<PlatformContact[]>("/api/v1/platform/contacts/"); }
+  faq() { return this.request<ManagedFaq[]>("/api/v1/platform/support/faq/"); }
+  saveFaq(id: string | null, payload: Omit<ManagedFaq, "id" | "updated_at">) { return this.request<ManagedFaq>(`/api/v1/platform/support/faq/${id ? `${id}/` : ""}`, { method: id ? "PATCH" : "POST", body: JSON.stringify(payload) }); }
+  supportContact() { return this.request<SupportContactSettings>("/api/v1/platform/support/contact-settings/"); }
+  saveSupportContact(payload: SupportContactSettings) { return this.request<SupportContactSettings>("/api/v1/platform/support/contact-settings/", { method: "PATCH", body: JSON.stringify(payload) }); }
 
   setupMfa() {
     return this.request<{ secret: string; otpauth_uri: string }>(
@@ -244,6 +370,13 @@ export class PlatformApi {
       "/api/v1/platform/auth/mfa/confirm/",
       { method: "POST", body: JSON.stringify({ code }) },
     );
+  }
+
+  changePassword(currentPassword: string, newPassword: string) {
+    return this.request<void>("/api/v1/platform/auth/password/", {
+      method: "POST",
+      body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+    });
   }
 
   accounts(filters: AccountFilters = {}) {
@@ -269,9 +402,11 @@ export class PlatformApi {
     id: string,
     payload: {
       reason: string;
-      features: string[];
+      features: PlanFeatures;
       limits: Record<string, number>;
       price_reference: string;
+      monthly_price_minor: number;
+      currency: string;
     },
   ) {
     return this.request<PlatformPlan>(`/api/v1/platform/plans/${id}/publish/`, {
