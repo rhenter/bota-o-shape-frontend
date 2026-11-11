@@ -190,7 +190,7 @@ export interface PlatformFinance { charges: Array<{ id: string; tenant_id: strin
 export interface PlatformOperations { alerts: { billing_errors: number; failed_payments: number; unread_contacts: number }; events: Array<{ id: string; provider: string; event_type: string; tenant_name: string | null; processed_at: string | null; error: string; created_at: string }>; failed_payments: Array<{ id: string; tenant_name: string; invoice_id: string; status: string; failure_code: string; processed_at: string | null }> }
 export interface PlatformLegal { documents: Array<{ id: string; kind: "terms" | "privacy"; version: number; text: string; published_at: string }>; data_requests: Array<{ id: string; tenant_name: string; subject_email: string; kind: string; status: string; retention_reason: string; created_at: string }> }
 export interface PlatformIntegrations { billing_providers: Array<{ provider: string; accounts: number }>; email: { configured: boolean; transport: string | null; host: string }; webhooks: { events_total: number; errors: number } }
-export interface PlatformContact { id: string; name: string; email: string; phone: string; subject: string; contact_type: string; message: string; status: string; is_read: boolean; source: string; created_at: string }
+export interface PlatformContact { id: string; name: string; email: string; phone: string; subject: string; contact_type: string; message: string; status: string; is_read: boolean; read_at: string | null; read_by: string | null; source: string; page_url: string; referrer: string; user_agent: string; ip_address: string | null; consent_given_at: string | null; created_at: string; updated_at: string }
 export interface ManagedFaq { id: string; question: string; answer: string; category: string; audience: string; locale: string; sort_order: number; is_published: boolean; updated_at: string }
 export interface SupportContactSettings { whatsapp_number: string; whatsapp_enabled: boolean; whatsapp_prefill_default: string }
 
@@ -353,6 +353,8 @@ export class PlatformApi {
   publishLegal(payload: { kind: "terms" | "privacy"; version: number; text: string }) { return this.request<{ id: string; kind: string; version: number }>("/api/v1/platform/legal/", { method: "POST", body: JSON.stringify(payload) }); }
   integrations() { return this.request<PlatformIntegrations>("/api/v1/platform/integrations/"); }
   contacts() { return this.request<PlatformContact[]>("/api/v1/platform/contacts/"); }
+  contact(id: string) { return this.request<PlatformContact>(`/api/v1/platform/contacts/${id}/`); }
+  markContactRead(id: string) { return this.request<PlatformContact>(`/api/v1/platform/contacts/${id}/`, { method: "POST" }); }
   faq() { return this.request<ManagedFaq[]>("/api/v1/platform/support/faq/"); }
   saveFaq(id: string | null, payload: Omit<ManagedFaq, "id" | "updated_at">) { return this.request<ManagedFaq>(`/api/v1/platform/support/faq/${id ? `${id}/` : ""}`, { method: id ? "PATCH" : "POST", body: JSON.stringify(payload) }); }
   supportContact() { return this.request<SupportContactSettings>("/api/v1/platform/support/contact-settings/"); }

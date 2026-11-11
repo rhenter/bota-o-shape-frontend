@@ -13,7 +13,6 @@ import {
   type ManagedFaq,
   type PlatformCapability,
   type PlatformCommercial,
-  type PlatformContact,
   type PlatformFinance,
   type PlatformIntegrations,
   type PlatformLegal,
@@ -1673,57 +1672,6 @@ export function SupportContactConsole() {
           <button className="button button-primary">Salvar</button>
           {message && <p className="status">{message}</p>}
         </form>
-      </Page>
-    </Guard>
-  );
-}
-
-export function ContactsConsole() {
-  const loader = useCallback(() => platformApi.contacts(), []);
-  const query = useLoad<PlatformContact[]>(loader);
-  return (
-    <Guard capability="support.manage">
-      <Page
-        eyebrow="LEADS E CONTATOS"
-        title="Contatos"
-        description="Solicitações recebidas pelos formulários públicos."
-      >
-        {!query.data ? (
-          <State error={query.error} />
-        ) : (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Data</th>
-                  <th>Contato</th>
-                  <th>Assunto</th>
-                  <th>Origem</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {query.data.map((item) => (
-                  <tr key={item.id}>
-                    <td>{date(item.created_at)}</td>
-                    <td>
-                      <strong>{item.name}</strong>
-                      <small>
-                        {item.email} · {item.phone}
-                      </small>
-                    </td>
-                    <td>
-                      {item.subject || item.contact_type}
-                      <small>{item.message}</small>
-                    </td>
-                    <td>{item.source || "Site"}</td>
-                    <td>{item.is_read ? "Lido" : "Novo"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
       </Page>
     </Guard>
   );

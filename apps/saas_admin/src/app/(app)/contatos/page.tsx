@@ -1,2 +1,5 @@
-import { ContactsConsole } from "@/components/admin-sections";
-export default function Page() { return <ContactsConsole />; }
+import { ContactsConsole } from "@/components/contacts-console";
+
+export default function Page() {
+  return <ContactsConsole />;
+}
