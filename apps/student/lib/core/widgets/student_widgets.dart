@@ -87,11 +87,16 @@ class CoachObservation extends StatelessWidget {
 }
 
 class Brand extends StatelessWidget {
-  const Brand({super.key, this.width = 180});
+  const Brand({super.key, this.width = 180, this.onDark = true});
+
   final double width;
+
+  /// Navy surfaces use the light wordmark. Light surfaces keep “Bota o” in blue.
+  final bool onDark;
+
   @override
   Widget build(BuildContext context) => Image.asset(
-    'assets/brand/logo-dark-header.png',
+    onDark ? 'assets/brand/logo-dark.png' : 'assets/brand/logo-light.png',
     width: width,
     fit: BoxFit.contain,
     semanticLabel: 'Bota o Shape!',

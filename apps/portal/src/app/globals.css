@@ -165,12 +165,11 @@ input {
 }
 .footer-brand {
   display: block;
-  height: 54px;
-  overflow: hidden;
+  height: auto;
 }
 .footer-brand .brand-logo {
-  width: 144px;
-  height: 54px;
+  width: auto;
+  height: 64px;
 }
 .footer-nav {
   display: flex;
@@ -515,13 +514,13 @@ header.top nav .btn.outline-nav {
   padding: 0 18px;
 }
 .brand {
-  height: 64px;
-  overflow: hidden;
+  height: auto;
 }
 .brand-logo {
   display: block;
-  width: 170px;
-  height: 64px;
+  width: auto;
+  height: 72px;
+  aspect-ratio: 3 / 2;
   object-fit: contain;
 }
 .btn.outline {
@@ -1361,7 +1360,8 @@ header.top nav .btn.outline-nav {
     flex: none;
   }
   .brand-logo {
-    width: 124px;
+    height: 52px;
+    width: auto;
   }
   header.top nav {
     gap: 8px;

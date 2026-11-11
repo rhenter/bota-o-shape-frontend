@@ -18,10 +18,10 @@ export function AccessScreen({ recovery = false }: { recovery?: boolean }) {
     <main className="access-page">
       <section className="access-brand">
         <Image
-          src="/brand/logo.png"
+          src="/brand/logo-dark.png"
           alt="Bota o Shape!"
-          width={245}
-          height={91}
+          width={1536}
+          height={1024}
           priority
         />
         <h1>

@@ -79,7 +79,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Brand(width: 148),
+          Brand(width: 96),
           SizedBox(height: 4),
           Text('Seu primeiro acesso'),
         ],

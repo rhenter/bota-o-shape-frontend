@@ -93,10 +93,10 @@ export function AppShell({ children }: { children: ReactNode }) {
           aria-label="Bota o Shape! · início"
         >
           <Image
-            src="/brand/logo.png"
+            src="/brand/logo-dark.png"
             alt="Bota o Shape!"
-            width={146}
-            height={54}
+            width={1536}
+            height={1024}
             priority
           />
         </Link>

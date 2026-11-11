@@ -22,4 +22,5 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/brand/logo-dark-header.png
+    - assets/brand/logo-dark.png
+    - assets/brand/logo-light.png

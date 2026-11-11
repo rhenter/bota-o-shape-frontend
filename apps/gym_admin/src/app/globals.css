@@ -264,13 +264,14 @@ button:disabled {
 }
 .brand {
   display: flex;
-  width: 180px;
+  width: auto;
   flex-shrink: 0;
   align-items: center;
 }
 .brand img {
-  height: 48px;
-  width: 132px;
+  height: 56px;
+  width: auto;
+  aspect-ratio: 3 / 2;
   object-fit: contain;
 }
 .tenant-switcher {
@@ -1017,8 +1018,10 @@ button:disabled {
   align-items: flex-start;
 }
 .access-brand > img {
-  width: 225px;
+  width: min(240px, 70vw);
   height: auto;
+  aspect-ratio: 3 / 2;
+  object-fit: contain;
   margin-bottom: 40px;
 }
 .access-brand h1 {
@@ -1174,8 +1177,8 @@ button:disabled {
     width: auto;
   }
   .brand img {
-    height: 40px;
-    width: 110px;
+    height: 44px;
+    width: auto;
   }
   .menu-toggle {
     display: inline-flex;
@@ -1254,7 +1257,7 @@ button:disabled {
     text-align: center;
   }
   .access-brand > img {
-    width: 160px;
+    width: min(168px, 46vw);
     margin-bottom: 16px;
   }
   .access-brand h1 {
@@ -1440,13 +1443,7 @@ button:disabled {
     margin: 0 10px 24px;
   }
 }
-/* The original logo has navy lettering; a light backing preserves its contrast. */
-.brand img,
-.access-brand > img {
-  background: white;
-  border-radius: 6px;
-  padding: 5px;
-}
+
 
 /* Workouts and assessments share the shell's spacing and touch targets. */
 .workout-list {
