@@ -866,6 +866,74 @@ dd {
   text-align: center;
 }
 
+.console-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.console-tab {
+  padding: 4px 2px 12px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.console-tab:hover {
+  color: var(--ink);
+}
+
+.console-tab.is-active {
+  border-bottom-color: var(--lime);
+  color: var(--ink);
+}
+
+.operation-filters {
+  grid-template-columns: repeat(3, minmax(160px, 1fr)) auto;
+}
+
+.integration-filters {
+  grid-template-columns: minmax(220px, 1fr) auto;
+}
+
+.integration-filters label {
+  max-width: 420px;
+}
+
+
+.info-banner {
+  margin: 0;
+  padding: 14px 18px;
+  border: 1px solid #cfe0f0;
+  border-radius: 10px;
+  background: #eef5fb;
+  color: #24425f;
+  font-weight: 600;
+}
+
+.empty-panel {
+  display: grid;
+  gap: 8px;
+  place-items: center;
+  padding: clamp(40px, 8vw, 72px) 24px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  background: white;
+  text-align: center;
+}
+
+.empty-panel h2, .empty-panel p {
+  margin: 0;
+}
+
+.empty-panel p {
+  color: var(--muted);
+}
+
+
 .table-footer {
   display: flex;
   align-items: center;

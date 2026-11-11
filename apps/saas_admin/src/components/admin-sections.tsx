@@ -108,6 +108,8 @@ const STATUS_TONES: Record<string, "active" | "warning" | "danger"> = {
   trialing: "active",
   past_due: "warning",
   pending: "warning",
+  processing: "warning",
+  failed: "danger",
   expired: "danger",
   canceled: "danger",
   cancelled: "danger",
@@ -717,15 +719,54 @@ export function ReceivablesConsole() {
   );
 }
 
+type OperationTab = "events" | "failed_payments";
+
+const OPERATION_TABS: Array<{ id: OperationTab; label: string }> = [
+  { id: "events", label: "Eventos e erros" },
+  { id: "failed_payments", label: "Pagamentos falhos" },
+];
+
+const normalize = (value: string) =>
+  value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+const matchesText = (value: string, term: string) =>
+  !term.trim() || normalize(value).includes(normalize(term.trim()));
+
 export function OperationsConsole() {
   const loader = useCallback(() => platformApi.operations(), []);
   const query = useLoad<PlatformOperations>(loader);
+  const [tab, setTab] = useState<OperationTab>("events");
+  const [eventDraft, setEventDraft] = useState({ result: "", account: "", event_type: "" });
+  const [eventFilters, setEventFilters] = useState(eventDraft);
+  const [paymentDraft, setPaymentDraft] = useState({ status: "", account: "", failure_code: "" });
+  const [paymentFilters, setPaymentFilters] = useState(paymentDraft);
+
+  function apply(event: FormEvent) {
+    event.preventDefault();
+    if (tab === "events") setEventFilters(eventDraft);
+    else setPaymentFilters(paymentDraft);
+  }
+
+  const events = (query.data?.events ?? []).filter(
+    (item) =>
+      (!eventFilters.result ||
+        (eventFilters.result === "error" ? Boolean(item.error) : !item.error)) &&
+      matchesText(item.tenant_name ?? "Não correlacionado", eventFilters.account) &&
+      matchesText(item.event_type, eventFilters.event_type),
+  );
+  const failedPayments = (query.data?.failed_payments ?? []).filter(
+    (item) =>
+      matchesText(item.status, paymentFilters.status) &&
+      matchesText(item.tenant_name, paymentFilters.account) &&
+      matchesText(item.failure_code, paymentFilters.failure_code),
+  );
+
   return (
     <Guard capability="operations.read">
       <Page
         eyebrow="OBSERVABILIDADE"
         title="Operação e alertas"
-        description="Falhas financeiras, eventos de webhook e contatos pendentes."
+        description="Eventos de webhook, falhas de pagamento e contatos pendentes reunidos para acompanhamento operacional."
       >
         {!query.data ? (
           <State error={query.error} />
@@ -745,30 +786,176 @@ export function OperationsConsole() {
                 <strong>{query.data.alerts.unread_contacts}</strong>
               </article>
             </div>
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Data</th>
-                    <th>Provedor</th>
-                    <th>Evento</th>
-                    <th>Conta</th>
-                    <th>Resultado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {query.data.events.map((item) => (
-                    <tr key={item.id}>
-                      <td>{date(item.created_at)}</td>
-                      <td>{item.provider}</td>
-                      <td>{item.event_type}</td>
-                      <td>{item.tenant_name ?? "Não correlacionado"}</td>
-                      <td>{item.error || "Processado"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="console-tabs" role="tablist" aria-label="Registros operacionais">
+              {OPERATION_TABS.map((item) => (
+                <button
+                  key={item.id}
+                  className={`console-tab ${tab === item.id ? "is-active" : ""}`}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === item.id}
+                  onClick={() => setTab(item.id)}
+                >
+                  {item.label}
+                </button>
+              ))}
             </div>
+            <form className="filters operation-filters" onSubmit={apply}>
+              {tab === "events" ? (
+                <>
+                  <label>
+                    Resultado
+                    <select
+                      value={eventDraft.result}
+                      onChange={(event) =>
+                        setEventDraft({ ...eventDraft, result: event.target.value })
+                      }
+                    >
+                      <option value="">Todos</option>
+                      <option value="processed">Processado</option>
+                      <option value="error">Com erro</option>
+                    </select>
+                  </label>
+                  <label>
+                    Conta
+                    <input
+                      value={eventDraft.account}
+                      onChange={(event) =>
+                        setEventDraft({ ...eventDraft, account: event.target.value })
+                      }
+                      placeholder="Nome da conta"
+                    />
+                  </label>
+                  <label>
+                    Tipo de evento
+                    <input
+                      value={eventDraft.event_type}
+                      onChange={(event) =>
+                        setEventDraft({ ...eventDraft, event_type: event.target.value })
+                      }
+                      placeholder="invoice.paid…"
+                    />
+                  </label>
+                </>
+              ) : (
+                <>
+                  <label>
+                    Status
+                    <input
+                      value={paymentDraft.status}
+                      onChange={(event) =>
+                        setPaymentDraft({ ...paymentDraft, status: event.target.value })
+                      }
+                      placeholder="failed, pending…"
+                    />
+                  </label>
+                  <label>
+                    Conta
+                    <input
+                      value={paymentDraft.account}
+                      onChange={(event) =>
+                        setPaymentDraft({ ...paymentDraft, account: event.target.value })
+                      }
+                      placeholder="Nome da conta"
+                    />
+                  </label>
+                  <label>
+                    Código da falha
+                    <input
+                      value={paymentDraft.failure_code}
+                      onChange={(event) =>
+                        setPaymentDraft({ ...paymentDraft, failure_code: event.target.value })
+                      }
+                      placeholder="card_declined…"
+                    />
+                  </label>
+                </>
+              )}
+              <button className="button">Filtrar</button>
+            </form>
+            {tab === "events" ? (
+              events.length ? (
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Data</th>
+                        <th>Provedor</th>
+                        <th>Evento</th>
+                        <th>Conta</th>
+                        <th>Resultado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {events.map((item) => (
+                        <tr key={item.id}>
+                          <td>{date(item.created_at)}</td>
+                          <td>{item.provider}</td>
+                          <td>{item.event_type}</td>
+                          <td>{item.tenant_name ?? "Não correlacionado"}</td>
+                          <td>
+                            {item.error ? (
+                              <span className="status-pill danger" title={item.error}>
+                                Com erro
+                              </span>
+                            ) : (
+                              <span className="status-pill active">Processado</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <div className="table-footer">
+                    <span>
+                      {events.length} de {query.data.events.length} evento(s)
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="empty-panel">
+                  <h2>Nenhum registro</h2>
+                  <p>Não há eventos operacionais para este filtro.</p>
+                </div>
+              )
+            ) : failedPayments.length ? (
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Conta</th>
+                      <th>Fatura</th>
+                      <th>Status</th>
+                      <th>Falha</th>
+                      <th>Processado em</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {failedPayments.map((item) => (
+                      <tr key={item.id}>
+                        <td>{item.tenant_name}</td>
+                        <td>{item.invoice_id}</td>
+                        <td>
+                          <StatusPill value={item.status} />
+                        </td>
+                        <td>{item.failure_code || "—"}</td>
+                        <td>{date(item.processed_at)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div className="table-footer">
+                  <span>
+                    {failedPayments.length} de {query.data.failed_payments.length} pagamento(s)
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="empty-panel">
+                <h2>Nenhum registro</h2>
+                <p>Não há pagamentos falhos para este filtro.</p>
+              </div>
+            )}
           </>
         )}
       </Page>
@@ -776,44 +963,246 @@ export function OperationsConsole() {
   );
 }
 
+type IntegrationTab = "providers" | "technical";
+
+const INTEGRATION_TABS: Array<{ id: IntegrationTab; label: string }> = [
+  { id: "providers", label: "Payment Providers" },
+  { id: "technical", label: "Integrações técnicas" },
+];
+
+const PROVIDER_LABELS: Record<string, string> = {
+  asaas: "Asaas",
+  mercado_pago: "Mercado Pago",
+};
+
+const providerLabel = (value: string) =>
+  PROVIDER_LABELS[value] ?? value.replace(/_/g, " ");
+
 export function IntegrationsConsole() {
   const loader = useCallback(() => platformApi.integrations(), []);
   const query = useLoad<PlatformIntegrations>(loader);
+  const [tab, setTab] = useState<IntegrationTab>("providers");
+  const [providerDraft, setProviderDraft] = useState({ type: "" });
+  const [providerFilters, setProviderFilters] = useState(providerDraft);
+  const [technicalDraft, setTechnicalDraft] = useState({ status: "" });
+  const [technicalFilters, setTechnicalFilters] = useState(technicalDraft);
+
+  function apply(event: FormEvent) {
+    event.preventDefault();
+    if (tab === "providers") setProviderFilters(providerDraft);
+    else setTechnicalFilters(technicalDraft);
+  }
+
+  const providers = (query.data?.billing_providers ?? []).filter(
+    (item) => !providerFilters.type || item.provider === providerFilters.type,
+  );
+  const providerOptions = (query.data?.billing_providers ?? []).map((item) => item.provider);
+
+  const technicalRows = query.data
+    ? [
+        {
+          id: "email",
+          name: "E-mail transacional",
+          tone: query.data.email.configured ? "active" : "inactive",
+          status: query.data.email.configured ? "Configurado" : "Não configurado",
+          detail: query.data.email.configured
+            ? `${query.data.email.transport} · ${query.data.email.host}`
+            : "Nenhum transporte SMTP ativo.",
+        },
+        {
+          id: "webhooks",
+          name: "Webhooks de cobrança",
+          tone:
+            query.data.webhooks.errors > 0
+              ? "danger"
+              : query.data.webhooks.events_total > 0
+                ? "active"
+                : "inactive",
+          status:
+            query.data.webhooks.errors > 0
+              ? `${query.data.webhooks.errors} com erro`
+              : query.data.webhooks.events_total > 0
+                ? "Recebendo"
+                : "Sem eventos",
+          detail: `${query.data.webhooks.events_total} evento(s) recebido(s).`,
+        },
+        {
+          id: "providers",
+          name: "Provedores de cobrança",
+          tone: query.data.billing_providers.length ? "active" : "inactive",
+          status: query.data.billing_providers.length ? "Em uso" : "Nenhum vínculo",
+          detail: query.data.billing_providers.length
+            ? query.data.billing_providers
+                .map((item) => `${providerLabel(item.provider)} (${item.accounts})`)
+                .join(" · ")
+            : "Nenhuma assinatura possui provedor vinculado.",
+        },
+      ].filter((item) => {
+        if (!technicalFilters.status) return true;
+        if (technicalFilters.status === "ok") return item.tone === "active";
+        if (technicalFilters.status === "attention") return item.tone === "danger";
+        return item.tone === "inactive";
+      })
+    : [];
+
   return (
     <Guard capability="integrations.manage">
       <Page
         eyebrow="CONFIGURAÇÃO TÉCNICA"
         title="Integrações"
-        description="Diagnóstico sanitizado dos provedores e canais da plataforma."
+        description="Payment Providers, credenciais técnicas e canais da plataforma possuem diagnósticos independentes."
       >
         {!query.data ? (
           <State error={query.error} />
         ) : (
-          <div className="detail-grid">
-            <article className="page-card">
-              <h2>Cobrança</h2>
-              {query.data.billing_providers.map((item) => (
-                <p key={item.provider}>
-                  <strong>{item.provider}</strong> · {item.accounts} conta(s)
-                </p>
+          <>
+            <p className="info-banner">
+              O ambiente e as credenciais são definidos no servidor. Este painel acompanha os
+              vínculos das assinaturas e o diagnóstico dos canais.
+            </p>
+            <div className="console-tabs" role="tablist" aria-label="Integrações">
+              {INTEGRATION_TABS.map((item) => (
+                <button
+                  key={item.id}
+                  className={`console-tab ${tab === item.id ? "is-active" : ""}`}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === item.id}
+                  onClick={() => setTab(item.id)}
+                >
+                  {item.label}
+                </button>
               ))}
-              {!query.data.billing_providers.length && <p>Nenhum provedor selecionado.</p>}
-            </article>
-            <article className="page-card">
-              <h2>E-mail</h2>
-              <p>
-                {query.data.email.configured
-                  ? `${query.data.email.transport} · ${query.data.email.host}`
-                  : "Não configurado"}
-              </p>
-            </article>
-            <article className="page-card">
-              <h2>Webhooks</h2>
-              <p>
-                {query.data.webhooks.events_total} eventos · {query.data.webhooks.errors} com erro
-              </p>
-            </article>
-          </div>
+            </div>
+            <form className="filters integration-filters" onSubmit={apply}>
+              {tab === "providers" ? (
+                <label>
+                  Tipo
+                  <select
+                    value={providerDraft.type}
+                    onChange={(event) =>
+                      setProviderDraft({ ...providerDraft, type: event.target.value })
+                    }
+                  >
+                    <option value="">Todos</option>
+                    {providerOptions.map((item) => (
+                      <option key={item} value={item}>
+                        {providerLabel(item)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : (
+                <label>
+                  Status
+                  <select
+                    value={technicalDraft.status}
+                    onChange={(event) =>
+                      setTechnicalDraft({ ...technicalDraft, status: event.target.value })
+                    }
+                  >
+                    <option value="">Todos</option>
+                    <option value="ok">Operacional</option>
+                    <option value="attention">Com erro</option>
+                    <option value="missing">Não configurado</option>
+                  </select>
+                </label>
+              )}
+              <button className="button">Filtrar</button>
+            </form>
+            {tab === "providers" ? (
+              providers.length ? (
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Provider</th>
+                        <th>Contas vinculadas</th>
+                        <th>Situação</th>
+                        <th />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {providers.map((item) => (
+                        <tr key={item.provider}>
+                          <td>
+                            <strong>{providerLabel(item.provider)}</strong>
+                            <small>{item.provider}</small>
+                          </td>
+                          <td>{item.accounts}</td>
+                          <td>
+                            <span
+                              className={`status-pill ${item.accounts ? "active" : "inactive"}`}
+                            >
+                              {item.accounts ? "Em uso" : "Sem contas"}
+                            </span>
+                          </td>
+                          <td>
+                            <Link className="text-link" href="/operacao">
+                              Diagnóstico
+                            </Link>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <div className="table-footer">
+                    <span>
+                      {providers.length} de {query.data.billing_providers.length} provider(s)
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="empty-panel">
+                  <h2>Nenhum provider</h2>
+                  <p>Nenhum provedor de cobrança corresponde ao filtro.</p>
+                </div>
+              )
+            ) : technicalRows.length ? (
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Integração</th>
+                      <th>Status</th>
+                      <th>Detalhe</th>
+                      <th />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {technicalRows.map((item) => (
+                      <tr key={item.id}>
+                        <td>
+                          <strong>{item.name}</strong>
+                        </td>
+                        <td>
+                          <span className={`status-pill ${item.tone}`}>{item.status}</span>
+                        </td>
+                        <td>{item.detail}</td>
+                        <td>
+                          {item.id === "webhooks" ? (
+                            <Link className="text-link" href="/operacao">
+                              Ver eventos
+                            </Link>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div className="table-footer">
+                  <span>{technicalRows.length} integração(ões)</span>
+                </div>
+              </div>
+            ) : (
+              <div className="empty-panel">
+                <h2>Nenhuma integração</h2>
+                <p>Nenhum canal corresponde ao filtro.</p>
+              </div>
+            )}
+          </>
         )}
       </Page>
     </Guard>
