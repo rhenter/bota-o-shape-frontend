@@ -1,3 +1,13 @@
+import type {
+  BillingOperation,
+  FiscalDocument,
+  PlatformInvoiceDetail,
+  ProviderBalance,
+  ProviderConfiguration,
+  ProviderReceivablesPage,
+  ProviderWrite,
+} from "./billing";
+
 export interface PlatformTokens {
   access: string;
   refresh: string;
@@ -176,6 +186,18 @@ export interface PlatformAuditEvent {
   tenant_name: string | null; metadata: Record<string, unknown>; ip_address: string | null;
 }
 
+export interface MeasurementProtocolRecord {
+  id: string;
+  name: string;
+  version: string;
+  method: string;
+  sites: string[];
+  equation_metadata: Record<string, unknown>;
+  is_active: boolean;
+}
+
+export type MeasurementProtocolInput = Omit<MeasurementProtocolRecord, "id">;
+
 export interface PlatformUserRecord { id: string; email: string; name: string; is_active: boolean; last_login: string | null; date_joined: string; memberships: Array<{ id: string; tenant_id: string; tenant_name: string; status: string; roles: string[] }> }
 export interface PlatformSubscriptionRecord {
   id: string; account_id: string; account_name: string; account_is_active: boolean;
@@ -197,9 +219,39 @@ export interface SupportContactSettings { whatsapp_number: string; whatsapp_enab
 interface ApiErrorPayload {
   detail?: string;
   mfa_required?: boolean;
+  [key: string]: unknown;
+}
+
+function errorText(
+  payload: ApiErrorPayload,
+  status: number,
+  fallback: Record<number, string>,
+) {
+  if (typeof payload.detail === "string" && payload.detail) return payload.detail;
+  const parts: string[] = [];
+  for (const [key, value] of Object.entries(payload)) {
+    if (key === "dependencies" || key === "mfa_required") continue;
+    if (typeof value === "string" && value) parts.push(`${key}: ${value}`);
+    if (!Array.isArray(value)) continue;
+    const text = value
+      .map((item) => {
+        if (typeof item === "string") return item;
+        if (item && typeof item === "object" && "message" in item) {
+          return String((item as { message: unknown }).message);
+        }
+        return "";
+      })
+      .filter(Boolean)
+      .join(" ");
+    if (text) parts.push(`${key}: ${text}`);
+  }
+  return parts.join(" ") || fallback[status] || "A solicitação não foi concluída.";
 }
 
 export class PlatformApiError extends Error {
+  uncertain = false;
+  body: unknown = null;
+
   constructor(
     public status: number,
     message: string,
@@ -396,6 +448,19 @@ export class PlatformApi {
     return this.request<PlatformAccount>(`/api/v1/platform/accounts/${id}/`);
   }
 
+  measurementProtocols() {
+    return this.request<MeasurementProtocolRecord[]>("/api/v1/platform/protocols/");
+  }
+
+  saveMeasurementProtocol(payload: MeasurementProtocolInput, protocolId?: string) {
+    return this.request<MeasurementProtocolRecord>(
+      protocolId
+        ? `/api/v1/platform/protocols/${protocolId}/`
+        : "/api/v1/platform/protocols/",
+      { method: protocolId ? "PATCH" : "POST", body: JSON.stringify(payload) },
+    );
+  }
+
   plans() {
     return this.request<PlatformPlan[]>("/api/v1/platform/plans/");
   }
@@ -423,7 +488,12 @@ export class PlatformApi {
     payload: Record<string, unknown>,
     idempotencyKey: string,
   ) {
-    return this.request<{ command: string; account_id: string; state: Record<string, unknown> }>(
+    return this.request<{
+      command: string;
+      account_id: string;
+      state: Record<string, unknown>;
+      operation?: BillingOperation;
+    }>(
       `/api/v1/platform/accounts/${id}/commands/${command}/`,
       {
         method: "POST",
@@ -431,6 +501,122 @@ export class PlatformApi {
         body: JSON.stringify(payload),
       },
     );
+  }
+
+  providerConfigurations() {
+    return this.request<ProviderConfiguration[]>("/api/v1/platform/integrations/providers/");
+  }
+
+  saveProviderConfiguration(payload: ProviderWrite, id?: string) {
+    return this.request<ProviderConfiguration>(
+      id
+        ? `/api/v1/platform/integrations/providers/${id}/`
+        : "/api/v1/platform/integrations/providers/",
+      { method: id ? "PATCH" : "POST", body: JSON.stringify(payload) },
+    );
+  }
+
+  deleteProviderConfiguration(id: string) {
+    return this.request<void>(`/api/v1/platform/integrations/providers/${id}/`, {
+      method: "DELETE",
+    });
+  }
+
+  validateProviderConfiguration(id: string) {
+    return this.request<ProviderConfiguration>(
+      `/api/v1/platform/integrations/providers/${id}/validate/`,
+      { method: "POST" },
+    );
+  }
+
+  setDefaultProviderConfiguration(id: string) {
+    return this.request<ProviderConfiguration>(
+      `/api/v1/platform/integrations/providers/${id}/default/`,
+      { method: "POST" },
+    );
+  }
+
+  queryProviderBalance(id: string, reason: string, idempotencyKey: string) {
+    return this.request<ProviderBalance>(
+      `/api/v1/platform/integrations/providers/${id}/balance/`,
+      {
+        method: "POST",
+        headers: { "Idempotency-Key": idempotencyKey },
+        body: JSON.stringify({ reason }),
+      },
+    );
+  }
+
+  providerReceivables(id: string, filters: { offset?: number; limit?: number; status?: string } = {}) {
+    const parameters = new URLSearchParams();
+    if (filters.offset != null) parameters.set("offset", String(filters.offset));
+    if (filters.limit != null) parameters.set("limit", String(filters.limit));
+    if (filters.status) parameters.set("status", filters.status);
+    const query = parameters.size ? `?${parameters.toString()}` : "";
+    return this.request<ProviderReceivablesPage>(
+      `/api/v1/platform/integrations/providers/${id}/receivables/${query}`,
+    );
+  }
+
+  billingOperations(filters: {
+    operation_type?: string;
+    status?: string;
+    tenant_id?: string;
+    invoice_id?: string;
+    needs_reconciliation?: boolean;
+  } = {}) {
+    const parameters = new URLSearchParams();
+    for (const [key, value] of Object.entries(filters)) {
+      if (value === undefined || value === "" || value === false) continue;
+      parameters.set(key, value === true ? "1" : String(value));
+    }
+    const query = parameters.size ? `?${parameters.toString()}` : "";
+    return this.request<BillingOperation[]>(`/api/v1/platform/billing/operations/${query}`);
+  }
+
+  reconcileOperation(id: string) {
+    return this.request<BillingOperation>(`/api/v1/platform/billing/operations/${id}/reconcile/`, {
+      method: "POST",
+    });
+  }
+
+  platformInvoice(id: string) {
+    return this.request<PlatformInvoiceDetail>(`/api/v1/platform/billing/invoices/${id}/`);
+  }
+
+  refundInvoice(
+    id: string,
+    payload: { amount_minor: number; reason: string },
+    idempotencyKey: string,
+  ) {
+    return this.request<BillingOperation>(`/api/v1/platform/billing/invoices/${id}/refund/`, {
+      method: "POST",
+      headers: { "Idempotency-Key": idempotencyKey },
+      body: JSON.stringify(payload),
+    });
+  }
+
+  syncPlatformInvoice(id: string, idempotencyKey: string) {
+    return this.request<BillingOperation>(`/api/v1/platform/billing/invoices/${id}/sync/`, {
+      method: "POST",
+      headers: { "Idempotency-Key": idempotencyKey },
+    });
+  }
+
+  issueFiscalDocument(id: string, reason: string) {
+    return this.request<FiscalDocument & { detail?: string }>(
+      `/api/v1/platform/billing/invoices/${id}/fiscal/`,
+      {
+        method: "POST",
+        body: JSON.stringify({ reason }),
+      },
+    );
+  }
+
+  syncFiscalDocument(id: string) {
+    return this.request<FiscalDocument>(`/api/v1/platform/billing/invoices/${id}/fiscal/sync/`, {
+      method: "POST",
+    });
   }
 
   supportTickets(filters: { status?: string; priority?: string; search?: string } = {}) {
@@ -495,8 +681,17 @@ export class PlatformApi {
         cache: "no-store",
         signal: options.signal ?? AbortSignal.timeout(15_000),
       });
-    } catch {
-      throw new PlatformApiError(0, "Não foi possível conectar à API.");
+    } catch (error) {
+      const uncertain =
+        error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError");
+      const apiError = new PlatformApiError(
+        0,
+        uncertain
+          ? "A API não respondeu a tempo. O resultado permanece incerto até uma nova consulta com a mesma chave."
+          : "Não foi possível conectar à API.",
+      );
+      apiError.uncertain = uncertain;
+      throw apiError;
     }
     if (response.status === 401 && authenticated && retry) {
       await this.rotate();
@@ -511,11 +706,13 @@ export class PlatformApi {
         403: "Você não tem acesso a esta área.",
         429: "Muitas tentativas. Aguarde e tente novamente.",
       };
-      throw new PlatformApiError(
+      const apiError = new PlatformApiError(
         response.status,
-        payload.detail ?? fallback[response.status] ?? "A solicitação não foi concluída.",
+        errorText(payload, response.status, fallback),
         Boolean(payload.mfa_required),
       );
+      apiError.body = payload;
+      throw apiError;
     }
     return response.status === 204 ? (undefined as T) : ((await response.json()) as T);
   }

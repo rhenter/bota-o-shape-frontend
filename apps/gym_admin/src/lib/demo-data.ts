@@ -78,4 +78,5 @@ export const mealPlans: readonly MealPlan[] = [{
 export const subscriptions: readonly AcademySubscription[] = [{
   id: "00000000-0000-4000-8000-000000001001", tenantId: demoIds.tenant, status: "pilot",
   planName: "Piloto de demonstração · valores a definir", billingContact: "financeiro@example.test", periodEnd: "2026-11-17T00:00:00Z",
+  limits: { active_students: 300 },
 }];

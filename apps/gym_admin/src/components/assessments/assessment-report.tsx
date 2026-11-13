@@ -19,6 +19,7 @@ import {
   measurementMethod,
   measurementSide,
   assessmentContext,
+  assessmentUsesDevice,
 } from "@/lib/assessments";
 import { AssessmentChart, compatibleAssessmentContext } from "./assessment-chart";
 const nextStatus: Partial<Record<AssessmentStatus, AssessmentStatus>> = {
@@ -191,7 +192,13 @@ function Content({ assessmentId }: { assessmentId?: string }) {
           </div>
           <div>
             <dt>Aparelho</dt>
-            <dd>{assessmentContext(current.device)}</dd>
+            <dd>
+              {current.measurements.some((item) =>
+                assessmentUsesDevice(item.method),
+              )
+                ? assessmentContext(current.device)
+                : "Não se aplica a este protocolo."}
+            </dd>
           </div>
           <div>
             <dt>Condições de preparação</dt>
@@ -289,7 +296,7 @@ function Content({ assessmentId }: { assessmentId?: string }) {
                       {measurementMethod(m.method)}
                       <br />
                       {protocol
-                        ? `${protocol.name} · v${protocol.version}`
+                        ? protocol.name
                         : m.protocol
                           ? "Protocolo sem detalhe disponível"
                           : "Sem protocolo"}

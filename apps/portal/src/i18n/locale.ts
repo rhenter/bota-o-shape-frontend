@@ -4,6 +4,12 @@ export function fill(template: string, values: Record<string, string | number>):
 
 export const LOCALES = ["pt-BR", "en"] as const;
 export type Locale = (typeof LOCALES)[number];
+export const LOCALE_COOKIE = "locale";
+
+/** A saved presentation choice overrides the browser language. */
+export function localeFromCookie(value: string | null | undefined): Locale | null {
+  return value === "pt-BR" || value === "en" ? value : null;
+}
 
 /** Pick a supported locale from an Accept-Language header. Portuguese is the default. */
 export function negotiateLocale(header: string | null | undefined): Locale {

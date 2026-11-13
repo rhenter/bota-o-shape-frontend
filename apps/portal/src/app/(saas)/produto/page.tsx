@@ -28,7 +28,7 @@ export default async function ProductPage() {
       <div className="wrap"><ProductShowcase /></div>
       <section className="product-cta">
         <div className="wrap actions">
-          <Link href="/cadastro" className="btn">{product.signup}</Link>
+          <Link href="/planos" className="btn">{product.signup}</Link>
           <Link href="/planos" className="btn ghost-dark">{product.plans}</Link>
         </div>
       </section>

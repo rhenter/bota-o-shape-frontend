@@ -4,9 +4,17 @@ import { useState } from "react";
 import { AppShell, useAppContext } from "@/components/app-shell";
 import { PageHeader } from "@/components/ui/page-header";
 import { DataTable } from "@/components/ui/data-table";
+import { StudentUsage } from "@/components/ui/student-usage";
+import { usePlanLimit } from "@/components/use-plan-limit";
+import { RowMenu } from "@/components/ui/row-menu";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Dialog } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/states";
+import {
+  AssignDietitianDialog,
+  dietitianSummary,
+  useDietitianDirectory,
+} from "@/components/students/assign-dietitian";
 import type { Student } from "@/lib/domain";
 
 export default function StudentsPage() {
@@ -28,13 +36,27 @@ function StudentsContent() {
   const [status, setStatus] = useState("all");
   const [coach, setCoach] = useState("all");
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [dietitianTarget, setDietitianTarget] = useState<Student | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<Student | null>(null);
+  const dietitianDirectory = useDietitianDirectory();
+  const studentLimit = usePlanLimit("active_students");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const admin =
     membership?.status === "active" && membership.roles.includes("admin");
   const coaches = [
     ...new Set(students.flatMap((student) => [...student.coachIds])),
+  ];
+  const statusTabs = [
+    { id: "all", label: "Todos" },
+    { id: "active", label: "Ativos" },
+    { id: "archived", label: "Arquivados" },
+    ...(mode === "api" || students.some((item) => item.status === "inactive")
+      ? [{ id: "inactive", label: "Inativos" }]
+      : []),
+    ...(mode === "api" || students.some((item) => item.status === "invited")
+      ? [{ id: "invited", label: "Convidados" }]
+      : []),
   ];
   const visible = students.filter(
     (student) =>
@@ -102,7 +124,28 @@ function StudentsContent() {
           )
         }
       />
+      <StudentUsage
+        active={students.filter((item) => item.status === "active").length}
+        limit={studentLimit}
+      />
       <section className="card table-card">
+        <div className="list-tabs" role="tablist" aria-label="Situação dos alunos">
+          {statusTabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={status === tab.id}
+              onClick={() => setStatus(tab.id)}
+            >
+              {tab.label} (
+              {students.filter(
+                (item) => tab.id === "all" || item.status === tab.id,
+              ).length}
+              )
+            </button>
+          ))}
+        </div>
         <div className="filters">
           <label className="field search-field">
             <span className="sr-only">Buscar alunos</span>
@@ -112,19 +155,6 @@ function StudentsContent() {
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />
-          </label>
-          <label className="field">
-            Status do aluno
-            <select
-              value={status}
-              onChange={(event) => setStatus(event.target.value)}
-            >
-              <option value="all">Todos</option>
-              <option value="active">Ativos</option>
-              <option value="archived">Arquivados</option>
-              {mode === "api" && <option value="inactive">Inativos</option>}
-              {mode === "api" && <option value="invited">Convidados</option>}
-            </select>
           </label>
           <label className="field">
             Professor responsável
@@ -194,6 +224,16 @@ function StudentsContent() {
                     .join(", ") || "Não atribuído",
               },
               {
+                key: "dietitian",
+                title: "Nutricionista",
+                render: (student) =>
+                  dietitianSummary(
+                    student.id,
+                    dietitianDirectory.assignments,
+                    dietitianDirectory.dietitians,
+                  ),
+              },
+              {
                 key: "status",
                 title: "Status",
                 render: (student) => <StatusBadge status={student.status} />,
@@ -202,26 +242,31 @@ function StudentsContent() {
                 key: "actions",
                 title: "Ações",
                 render: (student) => (
-                  <div className="row-actions">
-                    <Link
-                      className="button button-small"
-                      href={`/alunos/${student.id}`}
-                    >
-                      Ver perfil
-                    </Link>
-                    {admin && (
-                      <button
-                        type="button"
-                        className="button button-small button-quiet"
-                        onClick={() => setArchiveTarget(student)}
-                        aria-label={`${student.status === "archived" ? "Restaurar" : "Arquivar"} ${student.name}`}
-                      >
-                        {student.status === "archived"
-                          ? "Restaurar"
-                          : "Arquivar"}
-                      </button>
-                    )}
-                  </div>
+                  <RowMenu
+                    label={`Ações de ${student.name}`}
+                    actions={[
+                      {
+                        label: "Ver perfil",
+                        href: `/alunos/${student.id}`,
+                      },
+                      ...(admin
+                        ? [
+                            {
+                              label: "Atribuir nutricionista",
+                              onSelect: () => setDietitianTarget(student),
+                            },
+                            {
+                              label:
+                                student.status === "archived"
+                                  ? "Restaurar vínculo"
+                                  : "Arquivar",
+                              danger: student.status !== "archived",
+                              onSelect: () => setArchiveTarget(student),
+                            },
+                          ]
+                        : []),
+                    ]}
+                  />
                 ),
               },
             ]}
@@ -248,6 +293,19 @@ function StudentsContent() {
           <span>Academia ativa · acesso por vínculo</span>
         </footer>
       </section>
+      {dietitianTarget && admin && (
+        <AssignDietitianDialog
+          studentId={dietitianTarget.id}
+          studentName={dietitianTarget.name}
+          dietitians={dietitianDirectory.dietitians}
+          assignments={dietitianDirectory.assignments}
+          onClose={() => setDietitianTarget(null)}
+          onSaved={(text) => {
+            setMessage(text);
+            dietitianDirectory.reload();
+          }}
+        />
+      )}
       {inviteOpen && admin && (
         <Dialog title="Convidar aluno" onClose={() => setInviteOpen(false)}>
           <p className="muted">

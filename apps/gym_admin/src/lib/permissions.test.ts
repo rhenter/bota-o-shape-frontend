@@ -46,10 +46,11 @@ describe("canPublishMealPlan", () => {
 });
 
 describe("canManageBilling", () => {
-  it("requires the separate billing permission on an active membership in the requested tenant", () => {
+  it("allows the academy admin and a membership with billing.manage in the requested tenant", () => {
     const finance = { ...membership, permissions: ["billing.manage"] as const };
     expect(canManageBilling(user, finance, "tenant-1")).toBe(true);
-    expect(canManageBilling(user, { ...membership, roles: ["admin"] }, "tenant-1")).toBe(false);
+    expect(canManageBilling(user, { ...membership, roles: ["admin"] }, "tenant-1")).toBe(true);
+    expect(canManageBilling(user, membership, "tenant-1")).toBe(false);
     expect(canManageBilling(user, finance, "tenant-2")).toBe(false);
     expect(canManageBilling(user, { ...finance, status: "inactive" }, "tenant-1")).toBe(false);
     expect(canManageBilling(user, { ...finance, userId: "someone-else" }, "tenant-1")).toBe(false);

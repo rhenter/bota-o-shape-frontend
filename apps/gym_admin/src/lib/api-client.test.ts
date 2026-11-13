@@ -30,6 +30,78 @@ describe("contrato HTTP da API Django", () => {
     expect(headers.get("Authorization")).toBe(`Bearer ${access}`);
   });
 
+  it("grava a sessão e restaura no próximo carregamento", async () => {
+    const memory = new Map<string, string>();
+    const storage = {
+      getItem: (key: string) => memory.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        memory.set(key, value);
+      },
+      removeItem: (key: string) => {
+        memory.delete(key);
+      },
+    };
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(json({ access, refresh: "r1" }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    const client = new ApiClient("http://api.test", fetcher, storage);
+    await client.login("a@example.test", "senha");
+    const reloaded = new ApiClient("http://api.test", fetcher, storage);
+    reloaded.restore();
+    expect(reloaded.authenticated).toBe(true);
+    expect(reloaded.userId).toBe("user-1");
+    await reloaded.logout();
+    const signedOut = new ApiClient("http://api.test", fetcher, storage);
+    signedOut.restore();
+    expect(signedOut.authenticated).toBe(false);
+    expect(memory.size).toBe(0);
+  });
+
+  it("lista as notificações do usuário e marca uma como lida", async () => {
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(json({ access, refresh: "r1" }))
+      .mockResolvedValueOnce(
+        json({
+          count: 1,
+          next: null,
+          previous: null,
+          results: [
+            {
+              code: "n1",
+              subject: "Bem-vindo",
+              message: "Sua conta está ativa.",
+              notification_type: "welcome",
+              notification_type_display: "Boas-vindas",
+              is_read: false,
+              created_at: "2026-11-11T12:00:00Z",
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(
+        json({ count: 1, next: null, previous: null, results: [] }),
+      )
+      .mockResolvedValueOnce(json({ code: "n1", is_read: true }));
+    const client = new ApiClient("http://api.test", fetcher);
+    await client.login("a@example.test", "senha");
+    const page = await client.getNotifications();
+    expect(page.results[0]?.subject).toBe("Bem-vindo");
+    expect(fetcher.mock.calls[1][0]).toBe(
+      "http://api.test/api/notification/notifications/?limit=10&offset=0&ordering=-created_at",
+    );
+    await expect(client.getUnreadNotificationCount()).resolves.toBe(1);
+    await client.markNotificationRead("n1");
+    expect(fetcher.mock.calls[3][0]).toBe(
+      "http://api.test/api/notification/notifications/n1/",
+    );
+    expect(fetcher.mock.calls[3][1]?.method).toBe("PATCH");
+    expect(JSON.parse(String(fetcher.mock.calls[3][1]?.body))).toEqual({
+      is_read: true,
+    });
+  });
+
   it("rotaciona refresh, repete uma vez e usa o novo refresh ao revogar", async () => {
     const fetcher = vi
       .fn<typeof fetch>()
@@ -104,6 +176,25 @@ describe("contrato HTTP da API Django", () => {
       "http://api.test/api/tenancy/memberships/membership-1/archive/",
     );
     expect(fetcher.mock.calls[2][1]?.method).toBe("POST");
+  });
+
+  it("envia o logo da página pública como arquivo, sem JSON", async () => {
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(json({ access, refresh: "r1" }))
+      .mockResolvedValueOnce(json({ logo: "https://api.test/media/logo.png" }));
+    const client = new ApiClient("http://api.test", fetcher);
+    await client.login("a@example.test", "senha");
+    const logo = new File(["png"], "logo.png", { type: "image/png" });
+    await client.saveLandingLogo("tenant-1", logo);
+    expect(fetcher.mock.calls[1][0]).toBe("http://api.test/api/tenancy/landing-page/");
+    expect(fetcher.mock.calls[1][1]?.method).toBe("PATCH");
+    const body = fetcher.mock.calls[1][1]?.body;
+    expect(body).toBeInstanceOf(FormData);
+    expect((body as FormData).get("logo")).toBe(logo);
+    const headers = new Headers(fetcher.mock.calls[1][1]?.headers);
+    expect(headers.get("Content-Type")).toBeNull();
+    expect(headers.get("X-Tenant-ID")).toBe("tenant-1");
   });
 
   it("mantém a sessão encerrada quando o logout acontece durante a renovação", async () => {

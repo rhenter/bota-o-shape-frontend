@@ -59,6 +59,41 @@ describe("painel de demonstração", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("abre o sino, o menu da conta e o crédito no rodapé da navegação", async () => {
+    const user = userEvent.setup();
+    render(
+      <DemoProvider mode="demo">
+        <AppShell>
+          <p>Conteúdo</p>
+        </AppShell>
+      </DemoProvider>,
+    );
+    expect(
+      screen.getByRole("link", { name: "Henter Digital Solutions" }),
+    ).toHaveAttribute("href", "https://henter.com.br");
+    expect(screen.getByRole("link", { name: "Bota o Shape! · início" })).toHaveAttribute(
+      "href",
+      "/dashboard",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Últimas notificações" }),
+    );
+    expect(screen.getByRole("dialog", { name: "Notificações" })).toBeVisible();
+    expect(
+      screen.getByText(/nenhuma notificação da sua conta/i),
+    ).toBeVisible();
+    await user.click(screen.getByRole("button", { name: /mariana costa/i }));
+    expect(screen.getByRole("menuitem", { name: "Preferências" })).toHaveAttribute(
+      "href",
+      "/preferencias",
+    );
+    expect(screen.getByRole("menuitem", { name: "Trocar senha" })).toHaveAttribute(
+      "href",
+      "/alterar-senha",
+    );
+    expect(screen.getByRole("menuitem", { name: "Sair" })).toBeVisible();
+  });
+
   it("exige sessão no modo API, sem apresentar dados fictícios como fallback", () => {
     render(
       <DemoProvider mode="api">

@@ -6,7 +6,9 @@ import type {
   ApiUser,
   ApiCredential,
 } from "@/lib/api-client";
+type CredentialKind = ApiCredential["kind"];
 import { Dialog } from "../ui/dialog";
+import { RowMenu } from "../ui/row-menu";
 import { StatusBadge } from "../ui/status-badge";
 export const roleLabels: Record<ApiRole, string> = {
   owner: "Titular",
@@ -54,6 +56,8 @@ export function TeamTable({
   onRoles,
   onReset,
   onArchive,
+  onSaveCredential,
+  onVerifyCredential,
 }: {
   members: ApiMembership[];
   users: ApiUser[];
@@ -61,20 +65,29 @@ export function TeamTable({
   onRoles?: (member: ApiMembership, roles: ApiRole[]) => Promise<void>;
   onReset?: (member: ApiMembership) => Promise<void>;
   onArchive?: (member: ApiMembership) => Promise<void>;
+  onSaveCredential?: (
+    member: ApiMembership,
+    kind: CredentialKind,
+    registrationNumber: string,
+    state: string,
+  ) => Promise<void>;
+  onVerifyCredential?: (id: string) => Promise<void>;
 }) {
-  const [editing, setEditing] = useState(""),
+  const [rolesTarget, setRolesTarget] = useState<ApiMembership | null>(null),
     [roles, setRoles] = useState<ApiRole[]>([]),
     [query, setQuery] = useState(""),
     [busy, setBusy] = useState(false),
     [message, setMessage] = useState(""),
-    [archiveTarget, setArchiveTarget] = useState<ApiMembership | null>(null);
+    [archiveTarget, setArchiveTarget] = useState<ApiMembership | null>(null),
+    [credentialTarget, setCredentialTarget] =
+      useState<ApiMembership | null>(null);
   async function run(action: () => Promise<void>, success: string) {
     setBusy(true);
     setMessage("");
     try {
       await action();
       setMessage(success);
-      setEditing("");
+      setRolesTarget(null);
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "Ação não concluída.");
     } finally {
@@ -103,7 +116,7 @@ export function TeamTable({
             <tr>
               <th>Nome / e-mail</th>
               <th>Funções</th>
-              <th>CRN / UF</th>
+              <th>Registro</th>
               <th>Status</th>
               <th>Ações</th>
             </tr>
@@ -118,10 +131,11 @@ export function TeamTable({
                   .includes(query.toLowerCase());
               })
               .map((m) => {
-                const u = users.find((u) => u.id === m.user),
-                  credential = credentials.find(
-                    (c) => c.professional === m.user && c.kind === "crn",
-                  );
+                const u = users.find((u) => u.id === m.user);
+                const recordKinds: CredentialKind[] = [
+                  ...(m.roles.includes("dietitian") ? ["crn" as const] : []),
+                  ...(m.roles.includes("coach") ? ["cref" as const] : []),
+                ];
                 return (
                   <tr key={m.id}>
                     <td>
@@ -139,76 +153,77 @@ export function TeamTable({
                       ))}
                     </td>
                     <td>
-                      {credential
-                        ? `${credential.registration_number}/${credential.state} · ${credential.verified_at ? "Verificado" : "Pendente"}`
-                        : "Não informado"}
+                      {recordKinds.length
+                        ? recordKinds.map((kind) => {
+                            const credential = credentials.find(
+                              (item) =>
+                                item.professional === m.user &&
+                                item.kind === kind,
+                            );
+                            const label = kind === "crn" ? "CRN" : "CREF";
+                            return (
+                              <span key={kind}>
+                                {credential
+                                  ? `${label} ${credential.registration_number}/${credential.state} · ${credential.verified_at ? "Verificado" : "Pendente"}`
+                                  : `${label} não informado`}
+                                <br />
+                              </span>
+                            );
+                          })
+                        : "Não se aplica"}
                     </td>
                     <td>
                       <StatusBadge status={m.status} />
                     </td>
                     <td>
-                      <div className="row-actions">
-                        {onRoles && (
-                          <button
-                            className="button"
-                            disabled={busy}
-                            onClick={() => {
-                              setEditing(m.id);
-                              setRoles(m.roles);
-                            }}
-                          >
-                            Editar funções
-                          </button>
-                        )}
-                        {onReset && (
-                          <button
-                            className="button"
-                            disabled={busy}
-                            onClick={() =>
-                              void run(
-                                () => onReset(m),
-                                "Instruções de redefinição solicitadas por e-mail.",
-                              )
-                            }
-                          >
-                            Enviar redefinição de senha
-                          </button>
-                        )}
-                        {onArchive && (
-                          <button
-                            className="button"
-                            disabled={busy}
-                            onClick={() => setArchiveTarget(m)}
-                          >
-                            {m.status === "archived"
-                              ? "Restaurar vínculo"
-                              : "Arquivar vínculo"}
-                          </button>
-                        )}
-                      </div>
-                      {editing === m.id && onRoles && (
-                        <>
-                          <RoleFields roles={roles} onChange={setRoles} />
-                          <button
-                            className="button button-primary"
-                            disabled={busy || !roles.length}
-                            onClick={() =>
-                              void run(
-                                () => onRoles(m, roles),
-                                "Funções atualizadas.",
-                              )
-                            }
-                          >
-                            Salvar funções
-                          </button>
-                          <button
-                            className="button"
-                            onClick={() => setEditing("")}
-                          >
-                            Cancelar
-                          </button>
-                        </>
-                      )}
+                      <RowMenu
+                        label={`Ações de ${u ? `${u.first_name} ${u.last_name}`.trim() : m.email}`}
+                        actions={[
+                          ...(onSaveCredential && recordKinds.length > 0
+                            ? [
+                                {
+                                  label: "Registro profissional",
+                                  onSelect: () => setCredentialTarget(m),
+                                },
+                              ]
+                            : []),
+                          ...(onRoles
+                            ? [
+                                {
+                                  label: "Editar funções",
+                                  onSelect: () => {
+                                    setRolesTarget(m);
+                                    setRoles(m.roles);
+                                  },
+                                },
+                              ]
+                            : []),
+                          ...(onReset
+                            ? [
+                                {
+                                  label: "Enviar redefinição de senha",
+                                  onSelect: () =>
+                                    void run(
+                                      () => onReset(m),
+                                      "Instruções de redefinição solicitadas por e-mail.",
+                                    ),
+                                },
+                              ]
+                            : []),
+                          ...(onArchive
+                            ? [
+                                {
+                                  label:
+                                    m.status === "archived"
+                                      ? "Restaurar vínculo"
+                                      : "Arquivar vínculo",
+                                  danger: m.status !== "archived",
+                                  onSelect: () => setArchiveTarget(m),
+                                },
+                              ]
+                            : []),
+                        ]}
+                      />
                     </td>
                   </tr>
                 );
@@ -216,6 +231,66 @@ export function TeamTable({
           </tbody>
         </table>
       </div>
+      {rolesTarget && onRoles && (
+        <Dialog
+          title="Editar funções"
+          onClose={() => setRolesTarget(null)}
+        >
+          <p className="muted">{rolesTarget.email}</p>
+          <RoleFields roles={roles} onChange={setRoles} />
+          <div className="form-actions">
+            <button
+              className="button"
+              type="button"
+              onClick={() => setRolesTarget(null)}
+            >
+              Cancelar
+            </button>
+            <button
+              className="button button-primary"
+              type="button"
+              disabled={busy || !roles.length}
+              onClick={() =>
+                void run(
+                  () => onRoles(rolesTarget, roles),
+                  "Funções atualizadas.",
+                )
+              }
+            >
+              {busy ? "Aguarde…" : "Salvar funções"}
+            </button>
+          </div>
+        </Dialog>
+      )}
+      {credentialTarget && onSaveCredential && (
+        <CredentialDialog
+          member={credentialTarget}
+          credentials={credentials.filter(
+            (item) => item.professional === credentialTarget.user,
+          )}
+          busy={busy}
+          onClose={() => setCredentialTarget(null)}
+          onSave={async (kind, number, state) => {
+            await run(
+              () =>
+                onSaveCredential(credentialTarget, kind, number, state),
+              kind === "crn"
+                ? "CRN cadastrado como pendente."
+                : "CREF cadastrado como pendente.",
+            );
+          }}
+          onVerify={
+            onVerifyCredential
+              ? async (id) => {
+                  await run(
+                    () => onVerifyCredential(id),
+                    "Registro verificado.",
+                  );
+                }
+              : undefined
+          }
+        />
+      )}
       {archiveTarget && onArchive && (
         <Dialog
           title={
@@ -254,5 +329,135 @@ export function TeamTable({
         </Dialog>
       )}
     </>
+  );
+}
+
+function CredentialDialog({
+  member,
+  credentials,
+  busy,
+  onClose,
+  onSave,
+  onVerify,
+}: {
+  member: ApiMembership;
+  credentials: ApiCredential[];
+  busy: boolean;
+  onClose: () => void;
+  onSave: (
+    kind: CredentialKind,
+    registrationNumber: string,
+    state: string,
+  ) => Promise<void>;
+  onVerify?: (id: string) => Promise<void>;
+}) {
+  const kinds: CredentialKind[] = [
+    ...(member.roles.includes("dietitian") ? ["crn" as const] : []),
+    ...(member.roles.includes("coach") ? ["cref" as const] : []),
+  ];
+  return (
+    <Dialog title="Registro profissional" onClose={onClose}>
+      <p className="muted">{member.email}</p>
+      <p className="notice">
+        Confira a documentação antes de verificar. O papel de administrador não
+        autoriza prescrição.
+      </p>
+      {kinds.map((kind) => (
+        <CredentialForm
+          key={kind}
+          kind={kind}
+          credential={credentials.find((item) => item.kind === kind)}
+          busy={busy}
+          onSave={onSave}
+          onVerify={onVerify}
+        />
+      ))}
+    </Dialog>
+  );
+}
+
+function CredentialForm({
+  kind,
+  credential,
+  busy,
+  onSave,
+  onVerify,
+}: {
+  kind: CredentialKind;
+  credential?: ApiCredential;
+  busy: boolean;
+  onSave: (
+    kind: CredentialKind,
+    registrationNumber: string,
+    state: string,
+  ) => Promise<void>;
+  onVerify?: (id: string) => Promise<void>;
+}) {
+  const label = kind === "crn" ? "CRN" : "CREF";
+  const [number, setNumber] = useState(credential?.registration_number ?? "");
+  const [state, setState] = useState(credential?.state ?? "");
+  if (credential) {
+    return (
+      <section className="credential-block">
+        <h3>
+          {label} {credential.registration_number}/{credential.state}
+        </h3>
+        <p className="muted">
+          {credential.verified_at
+            ? "Verificado"
+            : "Verificação pendente"}
+        </p>
+        {!credential.verified_at && onVerify && (
+          <button
+            className="button"
+            type="button"
+            disabled={busy}
+            onClick={() => {
+              if (
+                window.confirm(
+                  `Conferi a documentação e confirmo a verificação deste ${label}.`,
+                )
+              )
+                void onVerify(credential.id);
+            }}
+          >
+            Confirmar verificação documental
+          </button>
+        )}
+      </section>
+    );
+  }
+  return (
+    <form
+      className="credential-block"
+      onSubmit={(event) => {
+        event.preventDefault();
+        void onSave(kind, number.trim(), state.toUpperCase());
+      }}
+    >
+      <h3>{label}</h3>
+      <label className="field">
+        Número
+        <input
+          required
+          value={number}
+          onChange={(event) => setNumber(event.target.value)}
+        />
+      </label>
+      <label className="field">
+        UF
+        <input
+          required
+          minLength={2}
+          maxLength={2}
+          pattern="[A-Za-z]{2}"
+          value={state}
+          onChange={(event) => setState(event.target.value)}
+        />
+      </label>
+      <button className="button button-primary" disabled={busy}>
+        {busy ? "Aguarde…" : `Cadastrar ${label}`}
+      </button>
+    </form>
   );
 }

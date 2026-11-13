@@ -124,10 +124,13 @@ export function activePlanFeatureNames(features: ApiPlanFeatures | undefined): s
 
 export interface ApiBillingPlan {
   id: string;
-  name: string;
+  name?: string;
+  version?: number;
   features: ApiPlanFeatures;
   limits: Record<string, number>;
   price_reference: string;
+  monthly_price_minor?: number;
+  currency?: string;
 }
 export type SubscriptionStatus =
   | "pilot"
@@ -150,14 +153,39 @@ export interface ApiSubscription {
   cancel_at: string | null;
   billing_details: Record<string, unknown>;
 }
+export interface ApiFiscalDocument {
+  id: string;
+  status: string;
+  number: string;
+  pdf_url: string;
+  xml_url: string;
+  error_message: string;
+}
 export interface ApiInvoice {
   id: string;
   subscription: string;
   status: string;
   currency: string;
   amount_minor: number;
+  amount_paid_minor?: number;
+  amount_refunded_minor?: number;
+  fee_minor?: number | null;
+  net_minor?: number | null;
+  payment_method?: string;
   due_at: string | null;
   hosted_url: string;
+  fiscal_document?: ApiFiscalDocument | null;
+}
+export interface ApiBillingCapabilities {
+  provider: string | null;
+  capabilities: Record<string, boolean>;
+}
+export interface ApiBillingOperation {
+  id: string;
+  operation_type: string;
+  status: string;
+  result_data?: { url?: string; provider_status?: string };
+  error_message?: string;
 }
 export interface ApiEntitlement {
   id: string;
@@ -166,12 +194,82 @@ export interface ApiEntitlement {
   limit: number | null;
   source: string;
 }
+export interface ApiUsageItem {
+  key: string;
+  used: number;
+  limit: number | null;
+}
+export interface ApiUsage {
+  items: ApiUsageItem[];
+}
+export interface ApiCatalogPlan {
+  id: string;
+  code: string;
+  name: string;
+  is_active: boolean;
+  sort_order: number;
+  current_version: ApiBillingPlan | null;
+}
+export interface UnitAddress {
+  postal_code: string;
+  street: string;
+  number: string;
+  complement: string;
+  district: string;
+  city: string;
+  state: string;
+}
 export interface ApiUnit {
   id: string;
   name: string;
-  address: Record<string, unknown>;
+  legal_name: string;
+  tax_id: string;
+  address: Partial<UnitAddress>;
   is_active: boolean;
+  services: string[];
 }
+export type UnitInput = Pick<ApiUnit, "name" | "legal_name" | "tax_id" | "is_active" | "services"> & {
+  address: UnitAddress;
+};
+export type LandingTheme = "lime" | "graphite" | "ocean" | "black" | "white";
+export type LandingBackground =
+  | "none"
+  | "gym_floor"
+  | "studio"
+  | "outdoor"
+  | "weights"
+  | "machines"
+  | "group_class"
+  | "nutrition";
+export interface ApiLandingPage {
+  mode: "standard" | "custom";
+  title: string;
+  logo: string | null;
+  phone: string;
+  email: string;
+  whatsapp: string;
+  instagram_url: string;
+  facebook_url: string;
+  youtube_url: string;
+  theme: LandingTheme;
+  background: LandingBackground;
+  slug: string | null;
+  custom_domain: string;
+  domain_verified: boolean;
+}
+export type LandingPageInput = Pick<
+  ApiLandingPage,
+  | "title"
+  | "phone"
+  | "email"
+  | "whatsapp"
+  | "instagram_url"
+  | "facebook_url"
+  | "youtube_url"
+  | "theme"
+  | "background"
+  | "slug"
+> & { custom_domain?: string };
 export function hostedUrl(value: string): string | undefined {
   try {
     const url = new URL(value);

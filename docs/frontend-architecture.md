@@ -13,7 +13,7 @@ The web client uses the API by default and accepts an explicit development-only 
 | Area | Responsibility |
 | --- | --- |
 | `gym_admin/src/lib/api-client.ts` and contract modules | HTTP transport, JWT rotation and revocation, tenant headers, pagination, and backend DTOs. |
-| `gym_admin/src/components/app-context.tsx` | In-memory session, active tenant, memberships, catalogs, and stale-response invalidation. |
+| `gym_admin/src/components/app-context.tsx` | Browser-restored session, active tenant, memberships, catalogs, and stale-response invalidation. |
 | Admin data hooks | Scoped reads, loading, errors, retries, and operational commands. |
 | Admin domain modules | Presentation models and explicit permission, assessment, and nutrition rules. |
 | Admin demo repository | Fictional fixtures isolated by user and tenant. |

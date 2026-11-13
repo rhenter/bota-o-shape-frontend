@@ -22,6 +22,6 @@ export function canManageBilling(user: User, membership: Membership | undefined,
     membership?.status === "active" &&
     membership.userId === user.id &&
     membership.tenantId === tenantId &&
-    membership.permissions.includes("billing.manage"),
+    (membership.roles.includes("admin") || membership.permissions.includes("billing.manage")),
   );
 }

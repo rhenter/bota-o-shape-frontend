@@ -6,7 +6,7 @@ import { useTrainingData } from "@/components/use-training-data";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState, ErrorState, LoadingState } from "@/components/states";
 import type { ApiMeasurement, AssessmentInput } from "@/lib/api-client";
-import { measurementMethod } from "@/lib/assessments";
+import { assessmentUsesDevice, measurementMethod } from "@/lib/assessments";
 
 const measurement = (): ApiMeasurement => ({
   metric: "",
@@ -81,7 +81,7 @@ function Content() {
         description={
           !students.length
             ? "A API atual não fornece a lista de alunos vinculados ao professor; a coleta depende de um perfil de aluno acessível."
-            : "Cadastre e revise um protocolo na administração da API antes de coletar. Nenhum protocolo clínico é gerado automaticamente."
+            : "Nenhum protocolo geral está ativo para coleta. O catálogo é definido na administração da plataforma. Nenhum cálculo clínico é feito automaticamente."
         }
         action={<Link href="/avaliacoes">Voltar às avaliações</Link>}
       />
@@ -111,7 +111,7 @@ function Content() {
       </Link>
       <PageHeader
         title="Nova avaliação física"
-        description="Escolha o protocolo, registre as condições e confira cada medida bruta."
+        description="Escolha o protocolo e anote as medidas. O restante só aparece quando a coleta pede."
       />
       <form
         onSubmit={async (event) => {
@@ -139,10 +139,12 @@ function Content() {
             assessed_at: new Date(
               String(form.get("assessed_at")),
             ).toISOString(),
-            device: {
-              brand: String(form.get("brand")),
-              model: String(form.get("model")),
-            },
+            device: assessmentUsesDevice(protocol.method)
+              ? {
+                  brand: String(form.get("brand") ?? "").trim(),
+                  model: String(form.get("model") ?? "").trim(),
+                }
+              : {},
             preparation_conditions: {
               hydration: String(form.get("hydration")),
               food: String(form.get("food")),
@@ -223,7 +225,7 @@ function Content() {
                   <option value="">Selecione</option>
                   {protocols.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.name} · v{p.version} · {measurementMethod(p.method)}
+                      {p.name} · {measurementMethod(p.method)}
                     </option>
                   ))}
                 </select>
@@ -231,8 +233,7 @@ function Content() {
               {protocol && (
                 <div className="notice">
                   <strong>
-                    Método: {measurementMethod(protocol.method)} · versão{" "}
-                    {protocol.version}
+                    Método: {measurementMethod(protocol.method)}
                   </strong>
                   <p>
                     Sítios do protocolo:{" "}
@@ -273,44 +274,57 @@ function Content() {
                 um registro separado; este formulário não o concede em nome do
                 aluno.
               </p>
-              <h2>2. Aparelho e condições</h2>
-              <div className="form-grid">
+              {protocol && !assessmentUsesDevice(protocol.method) && (
+                <p className="notice">
+                  Este protocolo não usa aparelho. Anote as medidas; marca e
+                  modelo não fazem parte desta coleta.
+                </p>
+              )}
+              {protocol && assessmentUsesDevice(protocol.method) && (
+                <>
+                  <h2>2. Aparelho</h2>
+                  <p className="help-text">
+                    Bioimpedância usa aparelho. Marca e modelo identificam o
+                    equipamento desta coleta.
+                  </p>
+                  <div className="form-grid">
+                    <label className="field">
+                      Marca do aparelho *
+                      <input name="brand" required maxLength={80} />
+                    </label>
+                    <label className="field">
+                      Modelo do aparelho *
+                      <input name="model" required maxLength={80} />
+                    </label>
+                  </div>
+                </>
+              )}
+              <details className="optional-context">
+                <summary>Condições e observações, se quiser anotar</summary>
                 <label className="field">
-                  Marca do aparelho
-                  <input name="brand" />
+                  Hidratação
+                  <input name="hydration" />
                 </label>
                 <label className="field">
-                  Modelo do aparelho
-                  <input name="model" />
+                  Alimentação / jejum
+                  <input name="food" />
                 </label>
-              </div>
-              <label className="field">
-                Hidratação
-                <input name="hydration" />
-              </label>
-              <label className="field">
-                Alimentação / jejum
-                <input name="food" />
-              </label>
-              <label className="field">
-                Exercício recente
-                <input name="recent_exercise" />
-              </label>
-              <label className="field">
-                Outras condições de preparação
-                <textarea name="conditions" />
-              </label>
-              <p className="help-text">
-                Horário, aparelho e preparação podem afetar os resultados.
-                Registre as condições para contextualizar comparações futuras.
-              </p>
-              <label className="field">
-                Observações profissionais
-                <textarea name="notes" />
-              </label>
+                <label className="field">
+                  Exercício recente
+                  <input name="recent_exercise" />
+                </label>
+                <label className="field">
+                  Outras condições de preparação
+                  <textarea name="conditions" />
+                </label>
+                <label className="field">
+                  Observações profissionais
+                  <textarea name="notes" />
+                </label>
+              </details>
             </section>
             <section className="card">
-              <h2>3. Medidas brutas</h2>
+              <h2>{protocol && assessmentUsesDevice(protocol.method) ? "3" : "2"}. Medidas</h2>
               <p className="help-text">
                 Cada campo preserva unidade, lado e ponto anatômico. Não há
                 interpretação clínica automática.

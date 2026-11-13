@@ -104,7 +104,7 @@ export default async function Home() {
       </section>
 
       <section className="home-final-cta">
-        <div className="wrap"><h2>{home.finalTitle}</h2><div className="actions"><Link href="/cadastro" className="btn">{home.finalStart} <span aria-hidden="true">→</span></Link><Link href="/produto" className="btn outline">{home.knowProduct}</Link></div></div>
+        <div className="wrap"><h2>{home.finalTitle}</h2><div className="actions"><Link href="/planos" className="btn">{home.finalStart} <span aria-hidden="true">→</span></Link><Link href="/produto" className="btn outline">{home.knowProduct}</Link></div></div>
       </section>
     </>
   );

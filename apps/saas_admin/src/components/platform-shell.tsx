@@ -63,7 +63,8 @@ const navigation: NavItem[] = [
         icon: "shield",
         capability: "accounts.read"
     },
-    {href: "/planos", label: "Planos", icon: "settings", capability: "plans.manage"}, {
+    {href: "/planos", label: "Planos", icon: "settings", capability: "plans.manage"},
+    {href: "/protocolos", label: "Protocolos", icon: "audit", capability: "accounts.read"}, {
         href: "/trials-retencao",
         label: "Trials e retenção",
         icon: "bell",
@@ -122,7 +123,7 @@ export function PlatformShell({children}: { children: ReactNode }) {
                                               aria-current={pathname === item.href || pathname.startsWith(`${item.href}/`) ? "page" : undefined}
                                               onClick={() => setSidebarOpen(false)}><Icon
                 name={item.icon}/><span>{item.label}</span></Link>)}</nav>
-            <div className="sidebar-footer"><p>Powered by <strong>Henter Digital Solutions</strong></p>
+            <div className="sidebar-footer"><p>Powered by <br /><strong>Henter Digital Solutions</strong></p>
                 <details className="user-menu">
                     <summary><span
                         className="avatar">{initials}</span><span><strong>{displayName}</strong><small>{membership.role === "administrator" ? "Administrador" : "Operador"}</small></span><b

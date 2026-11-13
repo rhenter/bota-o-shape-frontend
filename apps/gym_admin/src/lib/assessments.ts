@@ -37,12 +37,17 @@ export function compareMeasurements(
   };
 }
 
+export function assessmentUsesDevice(method: string) {
+  return method === "bioimpedance";
+}
+
 export function measurementMethod(method: string): string {
   return (
     {
       circumference: "Perímetros",
       skinfold: "Dobras cutâneas",
       bioimpedance: "Bioimpedância",
+      anthropometry: "Massa e estatura",
     }[method] ?? method
   );
 }

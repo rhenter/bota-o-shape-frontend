@@ -8,7 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { apiClient, type ApiMuscle, type ApiExercise } from "@/lib/api-client";
+import { apiClient, type ApiMuscle, type ApiExercise, type ApiTenant } from "@/lib/api-client";
 import {
   demoIds,
   demoRepository,
@@ -43,6 +43,17 @@ const emptyTenant: Tenant = {
   legalName: "",
   cnpj: "",
 };
+
+function tenantFromApi(item: ApiTenant): Tenant {
+  return {
+    id: item.id,
+    name: item.name,
+    legalName: item.legal_name,
+    cnpj: item.tax_id || item.cnpj || "CNPJ não informado",
+    personType: item.person_type,
+    profile: item.profile,
+  };
+}
 const emptySnapshot: Snapshot = {
   user: emptyUser,
   students: [],
@@ -134,7 +145,8 @@ function useAppValue(mode: "demo" | "api") {
   const [snapshot, setSnapshot] = useState<Snapshot>(emptySnapshot);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [sessionActive, setSessionActive] = useState(apiClient.authenticated);
+  const [sessionActive, setSessionActive] = useState(false);
+  const [booting, setBooting] = useState(mode === "api");
   const generation = useRef(0);
   useEffect(() => {
     if (mode !== "api") return;
@@ -149,6 +161,48 @@ function useAppValue(mode: "demo" | "api") {
         setError("");
       }
     });
+  }, [mode]);
+  useEffect(() => {
+    if (mode !== "api") return;
+    let cancelled = false;
+    apiClient.restore();
+    setSessionActive(apiClient.authenticated);
+    if (!apiClient.authenticated) {
+      setBooting(false);
+      return;
+    }
+    const preferred =
+      window.localStorage.getItem("bota-o-shape:gym-tenant") ?? "";
+    void (async () => {
+      try {
+        const available = await apiClient.getTenants();
+        if (cancelled || !apiClient.authenticated || !apiClient.userId) return;
+        const mapped = available.map(tenantFromApi);
+        if (!mapped.length)
+          throw new Error(
+            "Nenhuma academia vinculada disponível para esta conta.",
+          );
+        setTenants(mapped);
+        const id = mapped.some((item) => item.id === preferred)
+          ? preferred
+          : mapped[0].id;
+        await loadTenant(id, apiClient.userId);
+      } catch (failure) {
+        if (cancelled || !apiClient.authenticated) return;
+        setError(
+          failure instanceof Error
+            ? failure.message
+            : "Não foi possível carregar a academia.",
+        );
+      } finally {
+        if (!cancelled) setBooting(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // Restore once when the API session mounts. loadTenant is stable for this call.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode]);
   const demoUser = demoRepository.getUser(demoIds.user)!;
   const user = mode === "demo" ? demoUser : snapshot.user;
@@ -165,6 +219,8 @@ function useAppValue(mode: "demo" | "api") {
     const requestGeneration = ++generation.current;
     setSnapshot(emptySnapshot);
     selectTenant(id);
+    if (mode === "api")
+      window.localStorage.setItem("bota-o-shape:gym-tenant", id);
     setLoading(true);
     setError("");
     try {
@@ -273,18 +329,18 @@ function useAppValue(mode: "demo" | "api") {
     await apiClient.login(email, password);
     try {
       const available = await apiClient.getTenants();
-      const mapped = available.map((item) => ({
-        id: item.id,
-        name: item.name,
-        legalName: item.legal_name,
-        cnpj: item.cnpj ?? "CNPJ não informado",
-      }));
+      const mapped = available.map(tenantFromApi);
       if (!mapped.length || !apiClient.userId)
         throw new Error(
           "Nenhuma academia vinculada disponível para esta conta.",
         );
       setTenants(mapped);
-      await loadTenant(mapped[0].id, apiClient.userId);
+      const preferred =
+        window.localStorage.getItem("bota-o-shape:gym-tenant") ?? "";
+      await loadTenant(
+        mapped.some((item) => item.id === preferred) ? preferred : mapped[0].id,
+        apiClient.userId,
+      );
     } catch (failure) {
       apiClient.clearSession();
       setTenants([]);
@@ -419,6 +475,7 @@ function useAppValue(mode: "demo" | "api") {
     getExercise,
     saveExercise,
     authenticated: mode === "demo" || sessionActive,
+    booting: mode === "api" && booting,
   };
 }
 

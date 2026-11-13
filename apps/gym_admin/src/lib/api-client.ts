@@ -11,6 +11,13 @@ import type {
   ApiInvoice,
   ApiEntitlement,
   ApiUnit,
+  UnitInput,
+  ApiLandingPage,
+  LandingPageInput,
+  ApiBillingCapabilities,
+  ApiBillingOperation,
+  ApiUsage,
+  ApiCatalogPlan,
 } from "./admin-contracts";
 export type * from "./admin-contracts";
 import type {
@@ -34,7 +41,10 @@ export interface ApiTenant {
   id: string;
   name: string;
   legal_name: string;
-  cnpj: string | null;
+  tax_id?: string | null;
+  cnpj?: string | null;
+  person_type?: "individual" | "legal_entity";
+  profile?: "gym" | "personal_trainer" | "nutritionist" | "multidisciplinary";
   is_active: boolean;
 }
 export interface ApiUser {
@@ -80,9 +90,29 @@ export interface ApiAssignment {
   student: string;
   is_active: boolean;
 }
+export interface ApiNotification {
+  code: string;
+  subject: string;
+  message: string;
+  notification_type: string;
+  notification_type_display: string;
+  is_read: boolean;
+  created_at: string;
+}
 interface Tokens {
   access: string;
   refresh: string;
+}
+const sessionKey = "bota-o-shape:gym-session";
+type TokenStore = Pick<Storage, "getItem" | "setItem" | "removeItem">;
+
+function browserTokenStore(): TokenStore | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
 }
 interface Page<T> {
   count: number;
@@ -95,6 +125,8 @@ const portalOrigin = () =>
   typeof window === "undefined" ? "" : window.location.origin;
 
 export class ApiError extends Error {
+  uncertain = false;
+
   constructor(
     public status: number,
     message: string,
@@ -112,6 +144,7 @@ export class ApiClient {
   constructor(
     private baseUrl = portalOrigin(),
     private fetcher: typeof fetch = (...args) => fetch(...args),
+    private storage: TokenStore | null = browserTokenStore(),
   ) {}
   get authenticated() {
     return this.tokens !== null;
@@ -124,7 +157,21 @@ export class ApiClient {
   }
   private setSession(tokens: Tokens | null) {
     this.tokens = tokens;
+    if (tokens) this.storage?.setItem(sessionKey, JSON.stringify(tokens));
+    else this.storage?.removeItem(sessionKey);
     for (const listener of this.sessionListeners) listener(this.authenticated);
+  }
+  restore() {
+    if (this.tokens || !this.storage) return;
+    const raw = this.storage.getItem(sessionKey);
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw) as Tokens;
+      if (!parsed?.access || !parsed?.refresh) throw new Error("invalid");
+      this.setSession(parsed);
+    } catch {
+      this.storage.removeItem(sessionKey);
+    }
   }
   // This is an identifier hint only. The API authorizes every subsequent request.
   get userId(): string | undefined {
@@ -220,11 +267,18 @@ export class ApiClient {
           signal: options.signal ?? AbortSignal.timeout(15000),
         },
       );
-    } catch {
-      throw new ApiError(
+    } catch (error) {
+      const uncertain =
+        error instanceof Error &&
+        (error.name === "TimeoutError" || error.name === "AbortError");
+      const apiError = new ApiError(
         0,
-        "Não foi possível conectar à API. Verifique o serviço e tente novamente.",
+        uncertain
+          ? "A API não respondeu a tempo. O resultado desta operação continua incerto."
+          : "Não foi possível conectar à API. Verifique o serviço e tente novamente.",
       );
+      apiError.uncertain = uncertain;
+      throw apiError;
     }
     if (authenticated) this.requireGeneration(generation);
     if (response.status === 401 && authenticated && retry) {
@@ -327,6 +381,16 @@ export class ApiClient {
       { method: "POST", body: JSON.stringify(data) },
       tenant,
     );
+  updateDietitianAssignment = (
+    tenant: string,
+    id: string,
+    data: { is_active: boolean },
+  ) =>
+    this.request<ApiDietitianAssignment>(
+      `/api/tenancy/dietitian-assignments/${encodeURIComponent(id)}/`,
+      { method: "PATCH", body: JSON.stringify(data) },
+      tenant,
+    );
   getFoods = (tenant: string) => this.list<ApiFood>("/api/food/foods/", tenant);
   getFood = (tenant: string, id: string) =>
     this.request<ApiFood>(
@@ -375,27 +439,98 @@ export class ApiClient {
     this.list<ApiInvoice>("/api/billing/invoices/", tenant);
   getEntitlements = (tenant: string) =>
     this.list<ApiEntitlement>("/api/billing/entitlements/", tenant);
+  getBillingCapabilities = (tenant: string) =>
+    this.request<ApiBillingCapabilities>("/api/billing/capabilities/", {}, tenant);
+  getUsage = (tenant: string) =>
+    this.request<ApiUsage>("/api/billing/usage/", {}, tenant);
+  getBillingPlans = (tenant: string) =>
+    this.list<ApiCatalogPlan>("/api/billing/plans/", tenant);
+  cancelRenewal = (tenant: string, id: string, reason: string, idempotencyKey: string) =>
+    this.request<ApiBillingOperation>(
+      `/api/billing/subscriptions/${encodeURIComponent(id)}/cancel-renewal/`,
+      {
+        method: "POST",
+        headers: { "Idempotency-Key": idempotencyKey },
+        body: JSON.stringify({ reason }),
+      },
+      tenant,
+    );
+  changePlan = (
+    tenant: string,
+    id: string,
+    planCode: string,
+    reason: string,
+    idempotencyKey: string,
+  ) =>
+    this.request<ApiBillingOperation>(
+      `/api/billing/subscriptions/${encodeURIComponent(id)}/change-plan/`,
+      {
+        method: "POST",
+        headers: { "Idempotency-Key": idempotencyKey },
+        body: JSON.stringify({ plan_code: planCode, reason }),
+      },
+      tenant,
+    );
   openBilling = (
     tenant: string,
     id: string,
     action: "portal" | "checkout",
     returnUrl: string,
+    idempotencyKey: string,
   ) =>
-    this.request<{ url: string }>(
+    this.request<ApiBillingOperation>(
       `/api/billing/subscriptions/${encodeURIComponent(id)}/${action}/`,
-      { method: "POST", body: JSON.stringify({ return_url: returnUrl }) },
+      {
+        method: "POST",
+        headers: { "Idempotency-Key": idempotencyKey },
+        body: JSON.stringify({ return_url: returnUrl, mode: action === "checkout" ? "hosted" : undefined }),
+      },
+      tenant,
+    );
+  syncInvoice = (tenant: string, id: string, idempotencyKey: string) =>
+    this.request<ApiBillingOperation>(
+      `/api/billing/invoices/${encodeURIComponent(id)}/sync/`,
+      {
+        method: "POST",
+        headers: { "Idempotency-Key": idempotencyKey },
+      },
       tenant,
     );
   getUnits = (tenant: string) =>
     this.list<ApiUnit>("/api/tenancy/units/", tenant);
-  saveUnit = (
-    tenant: string,
-    id: string,
-    data: Pick<ApiUnit, "name" | "is_active">,
-  ) =>
+  getLandingPage = (tenant: string) =>
+    this.request<ApiLandingPage>("/api/tenancy/landing-page/", {}, tenant);
+  saveLandingPage = (tenant: string, data: LandingPageInput) =>
+    this.request<ApiLandingPage>(
+      "/api/tenancy/landing-page/",
+      { method: "PATCH", body: JSON.stringify(data) },
+      tenant,
+    );
+  checkPublicSlug = (tenant: string, slug: string) =>
+    this.request<{ available: boolean; reason: "invalid" | "reserved" | "taken" | "" }>(
+      `/api/tenancy/landing-page/slug/?slug=${encodeURIComponent(slug)}`,
+      {},
+      tenant,
+    );
+  saveLandingLogo = (tenant: string, logo: File) => {
+    const body = new FormData();
+    body.append("logo", logo);
+    return this.request<ApiLandingPage>(
+      "/api/tenancy/landing-page/",
+      { method: "PATCH", body },
+      tenant,
+    );
+  };
+  saveUnit = (tenant: string, id: string, data: UnitInput) =>
     this.request<ApiUnit>(
       `/api/tenancy/units/${encodeURIComponent(id)}/`,
       { method: "PATCH", body: JSON.stringify(data) },
+      tenant,
+    );
+  createUnit = (tenant: string, data: UnitInput) =>
+    this.request<ApiUnit>(
+      "/api/tenancy/units/",
+      { method: "POST", body: JSON.stringify(data) },
       tenant,
     );
   getWorkoutTemplates = (tenant: string) =>
@@ -474,6 +609,21 @@ export class ApiClient {
   getConsents = (tenant: string) =>
     this.list<ApiConsent>("/api/tenancy/consents/", tenant);
   getTenants = () => this.list<ApiTenant>("/api/tenancy/tenants/");
+  getNotifications = (offset = 0) =>
+    this.request<Page<ApiNotification>>(
+      `/api/notification/notifications/?limit=10&offset=${offset}&ordering=-created_at`,
+    );
+  getUnreadNotificationCount = async () => {
+    const page = await this.request<Page<ApiNotification>>(
+      "/api/notification/notifications/?is_read=false&limit=1",
+    );
+    return page.count;
+  };
+  markNotificationRead = (code: string) =>
+    this.request<ApiNotification>(
+      `/api/notification/notifications/${encodeURIComponent(code)}/`,
+      { method: "PATCH", body: JSON.stringify({ is_read: true }) },
+    );
   getUsers = (tenant: string) => this.list<ApiUser>("/api/user/users/", tenant);
   getUser = (tenant: string, id: string) =>
     this.request<ApiUser>(

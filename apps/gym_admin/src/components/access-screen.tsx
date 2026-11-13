@@ -211,7 +211,7 @@ export function AccessScreen({ recovery = false }: { recovery?: boolean }) {
               ? "O código de recuperação é pessoal, de uso único e possui expiração."
               : mode === "demo"
                 ? "Acesso de desenvolvimento. Alterações temporárias, sem envio à API."
-                : "Acesso por vínculo com sua academia. A sessão fica na memória; ao recarregar, entre novamente."}
+                : "Acesso por vínculo com sua academia. A sessão permanece neste navegador até você sair."}
           </p>
         </div>
       </section>

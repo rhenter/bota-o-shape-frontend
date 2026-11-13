@@ -7,6 +7,8 @@ export interface Tenant {
   name: string;
   legalName: string;
   cnpj: string;
+  personType?: "individual" | "legal_entity";
+  profile?: "gym" | "personal_trainer" | "nutritionist" | "multidisciplinary";
 }
 
 export interface User {
@@ -171,4 +173,5 @@ export interface AcademySubscription extends TenantRecord {
   planName: string;
   billingContact: string;
   periodEnd: string;
+  limits?: Record<string, number>;
 }

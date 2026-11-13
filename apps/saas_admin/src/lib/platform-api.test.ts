@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { PlatformApi } from "./platform-api";
+import { PlatformApi, PlatformApiError } from "./platform-api";
 
 function jwt(exp: number) {
   const encode = (value: object) =>
@@ -104,5 +104,62 @@ describe("PlatformApi authentication", () => {
     await expect(api.me()).rejects.toMatchObject({ status: 401 });
     expect(api.authenticated).toBe(false);
     expect(storage.values.size).toBe(0);
+  });
+});
+
+describe("Asaas platform calls", () => {
+  it("sends the refund body and reuses the caller idempotency key", async () => {
+    const fetcher = vi.fn<typeof fetch>().mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.endsWith("/auth/login/")) {
+        return new Response(JSON.stringify(tokens), { status: 200 });
+      }
+      return new Response(
+        JSON.stringify({ id: "op-1", status: "succeeded", result_data: {}, error_message: "" }),
+        { status: 200 },
+      );
+    });
+    const api = new PlatformApi("https://platform.example.com", fetcher, memoryStorage());
+    await api.login("operator@example.com", "secret");
+    await api.refundInvoice("invoice-1", { amount_minor: 400, reason: "Estorno parcial aprovado." }, "same-key");
+    await api.refundInvoice("invoice-1", { amount_minor: 400, reason: "Estorno parcial aprovado." }, "same-key");
+    const refunds = fetcher.mock.calls.filter(([url]) => String(url).endsWith("/refund/"));
+    expect(refunds).toHaveLength(2);
+    for (const [, init] of refunds) {
+      expect(new Headers(init?.headers).get("Idempotency-Key")).toBe("same-key");
+      expect(init?.body).toBe(JSON.stringify({ amount_minor: 400, reason: "Estorno parcial aprovado." }));
+    }
+  });
+
+  it("keeps a timeout uncertain instead of treating it as a refusal", async () => {
+    const fetcher = vi.fn<typeof fetch>().mockImplementation(async (input) => {
+      if (String(input).endsWith("/auth/login/")) {
+        return new Response(JSON.stringify(tokens), { status: 200 });
+      }
+      const error = new Error("timed out");
+      error.name = "TimeoutError";
+      throw error;
+    });
+    const api = new PlatformApi("https://platform.example.com", fetcher, memoryStorage());
+    await api.login("operator@example.com", "secret");
+    await expect(api.syncPlatformInvoice("invoice-1", "sync-key")).rejects.toMatchObject({
+      status: 0,
+      uncertain: true,
+    } satisfies Partial<PlatformApiError>);
+  });
+
+  it("asks the provider receivables endpoint for server pagination", async () => {
+    const fetcher = vi.fn<typeof fetch>().mockImplementation(async (input) => {
+      if (String(input).endsWith("/auth/login/")) {
+        return new Response(JSON.stringify(tokens), { status: 200 });
+      }
+      return new Response(JSON.stringify({ items: [], has_more: false, next_offset: null }), { status: 200 });
+    });
+    const api = new PlatformApi("https://platform.example.com", fetcher, memoryStorage());
+    await api.login("operator@example.com", "secret");
+    await api.providerReceivables("provider-1", { offset: 50, limit: 50, status: "received" });
+    expect(String(fetcher.mock.calls.at(-1)?.[0])).toContain(
+      "/integrations/providers/provider-1/receivables/?offset=50&limit=50&status=received",
+    );
   });
 });

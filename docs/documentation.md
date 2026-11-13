@@ -25,7 +25,7 @@ Demo content is fictitious. It does not authenticate users, persist records on t
 
 The dashboard covers authentication, tenants, students, staff, exercises, equipment, workouts, assessments, nutrition, settings, audit guidance, and subscription views. API access uses JWT login, rotating refresh tokens, revocation, and `X-Tenant-ID`.
 
-Access and refresh tokens stay in memory. Reloading requires a new login. Each authenticated request belongs to a session generation so stale responses cannot update a new account or tenant. Concurrent refreshes share one attempt within the same generation, and an invalid current session returns the interface to sign-in.
+Access and refresh tokens stay in this browser's `localStorage` and are restored on reload. Signing out removes that session. Each authenticated request belongs to a session generation so stale responses cannot update a new account or tenant. Concurrent refreshes share one attempt within the same generation, and an invalid current session returns the interface to sign-in.
 
 UI permission checks improve the experience but never replace backend authorization. The backend must validate the tenant, role, student relationship, professional credentials, assignment, and consent for every read and mutation.
 

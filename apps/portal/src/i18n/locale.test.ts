@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fill, negotiateLocale } from "./locale";
+import { fill, localeFromCookie, negotiateLocale } from "./locale";
 
 describe("negotiateLocale", () => {
   it("defaults to Brazilian Portuguese", () => {
@@ -16,6 +16,13 @@ describe("negotiateLocale", () => {
 
   it("fills named placeholders", () => {
     expect(fill("Up to {students} active members", { students: 500 })).toBe("Up to 500 active members");
+  });
+
+  it("accepts only the two presentation languages from the cookie", () => {
+    expect(localeFromCookie("pt-BR")).toBe("pt-BR");
+    expect(localeFromCookie("en")).toBe("en");
+    expect(localeFromCookie("fr")).toBeNull();
+    expect(localeFromCookie(undefined)).toBeNull();
   });
 
   it("matches language prefixes", () => {

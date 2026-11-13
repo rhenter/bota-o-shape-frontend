@@ -4,9 +4,13 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { FormEvent, ReactNode, useCallback, useEffect, useRef, useState } from "react";
 
+import { safeHttps } from "@/lib/billing";
 import { legalPlainText, sanitizeLegalHtml } from "@/lib/legal-html";
 import { featureRows, limitRows } from "@/lib/plan-catalog";
 import { useAuth } from "./auth-context";
+import { BillingOperationsPanel } from "./billing-operations-panel";
+import { ProviderConfigPanel } from "./provider-config-panel";
+import { ProviderFinancePanel } from "./provider-finance-panel";
 import { CapabilityGuard } from "./capability-guard";
 import {
   platformApi,
@@ -623,7 +627,7 @@ export function ChargesConsole() {
       <Page
         eyebrow="FINANCEIRO"
         title="Cobranças"
-        description="Faturas emitidas e tentativas de pagamento registradas pelos provedores."
+        description="Faturas das academias. A API entrega até 500 cobranças nesta lista, sem paginação. O detalhe, o estorno e a nota fiscal ficam em cada fatura."
       >
         {!query.data ? (
           <State error={query.error} />
@@ -653,18 +657,19 @@ export function ChargesConsole() {
                     <td>{date(item.due_at)}</td>
                     <td>{item.attempts.length}</td>
                     <td>
-                      {item.hosted_url ? (
+                      <Link className="text-link" href={`/cobrancas/${item.id}`}>
+                        Detalhes
+                      </Link>
+                      {safeHttps(item.hosted_url) ? (
                         <a
                           className="text-link"
-                          href={item.hosted_url}
+                          href={safeHttps(item.hosted_url)}
                           target="_blank"
-                          rel="noreferrer"
+                          rel="noopener noreferrer"
                         >
-                          Abrir fatura
+                          Abrir cobrança
                         </a>
-                      ) : (
-                        "—"
-                      )}
+                      ) : null}
                     </td>
                   </tr>
                 ))}
@@ -685,7 +690,7 @@ export function ReceivablesConsole() {
       <Page
         eyebrow="FLUXO FINANCEIRO"
         title="Recebíveis e repasses"
-        description="Valores confirmados e saldos vencidos, separados por moeda."
+        description="O resumo agrega faturas das academias. O saldo global do provedor fica na consulta separada abaixo."
       >
         {!query.data ? (
           <State error={query.error} />
@@ -713,6 +718,7 @@ export function ReceivablesConsole() {
               )}
           </div>
         )}
+        <ProviderFinancePanel />
       </Page>
     </Guard>
   );
@@ -957,6 +963,7 @@ export function OperationsConsole() {
             )}
           </>
         )}
+        <BillingOperationsPanel />
       </Page>
     </Guard>
   );
@@ -965,8 +972,8 @@ export function OperationsConsole() {
 type IntegrationTab = "providers" | "technical";
 
 const INTEGRATION_TABS: Array<{ id: IntegrationTab; label: string }> = [
-  { id: "providers", label: "Payment Providers" },
-  { id: "technical", label: "Integrações técnicas" },
+  { id: "providers", label: "Provedores" },
+  { id: "technical", label: "Canais técnicos" },
 ];
 
 const PROVIDER_LABELS: Record<string, string> = {
@@ -1049,16 +1056,12 @@ export function IntegrationsConsole() {
       <Page
         eyebrow="CONFIGURAÇÃO TÉCNICA"
         title="Integrações"
-        description="Payment Providers, credenciais técnicas e canais da plataforma possuem diagnósticos independentes."
+        description="Credenciais dos provedores de pagamento e diagnóstico dos canais da plataforma."
       >
         {!query.data ? (
           <State error={query.error} />
         ) : (
           <>
-            <p className="info-banner">
-              O ambiente e as credenciais são definidos no servidor. Este painel acompanha os
-              vínculos das assinaturas e o diagnóstico dos canais.
-            </p>
             <div className="console-tabs" role="tablist" aria-label="Integrações">
               {INTEGRATION_TABS.map((item) => (
                 <button
@@ -1073,25 +1076,8 @@ export function IntegrationsConsole() {
                 </button>
               ))}
             </div>
-            <form className="filters integration-filters" onSubmit={apply}>
-              {tab === "providers" ? (
-                <label>
-                  Tipo
-                  <select
-                    value={providerDraft.type}
-                    onChange={(event) =>
-                      setProviderDraft({ ...providerDraft, type: event.target.value })
-                    }
-                  >
-                    <option value="">Todos</option>
-                    {providerOptions.map((item) => (
-                      <option key={item} value={item}>
-                        {providerLabel(item)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              ) : (
+            {tab === "technical" ? (
+              <form className="filters integration-filters" onSubmit={apply}>
                 <label>
                   Status
                   <select
@@ -1106,11 +1092,38 @@ export function IntegrationsConsole() {
                     <option value="missing">Não configurado</option>
                   </select>
                 </label>
-              )}
-              <button className="button">Filtrar</button>
-            </form>
+                <button className="button">Filtrar</button>
+              </form>
+            ) : null}
             {tab === "providers" ? (
-              providers.length ? (
+              <>
+                <ProviderConfigPanel />
+                <div className="panel-heading">
+                  <div>
+                    <h2 className="form-section-title">Uso nas academias</h2>
+                    <p>Contas com assinatura vinculada. Isso não é o saldo da conta Asaas.</p>
+                  </div>
+                </div>
+                <form className="filters integration-filters" onSubmit={apply}>
+                  <label>
+                    Tipo
+                    <select
+                      value={providerDraft.type}
+                      onChange={(event) =>
+                        setProviderDraft({ ...providerDraft, type: event.target.value })
+                      }
+                    >
+                      <option value="">Todos</option>
+                      {providerOptions.map((item) => (
+                        <option key={item} value={item}>
+                          {providerLabel(item)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button className="button">Filtrar</button>
+                </form>
+              {providers.length ? (
                 <div className="table-wrap">
                   <table>
                     <thead>
@@ -1156,7 +1169,8 @@ export function IntegrationsConsole() {
                   <h2>Nenhum provider</h2>
                   <p>Nenhum provedor de cobrança corresponde ao filtro.</p>
                 </div>
-              )
+              )}
+              </>
             ) : technicalRows.length ? (
               <div className="table-wrap">
                 <table>
@@ -1468,45 +1482,82 @@ export function LegalConsole() {
   );
 }
 
+type FaqDraft = Omit<ManagedFaq, "id" | "updated_at">;
+
+const FAQ_CATEGORIES: Record<string, string> = {
+  plans: "Planos",
+  product: "Produto",
+  billing: "Cobrança",
+  account: "Conta",
+  technical: "Técnico",
+  other: "Outro",
+};
+
+const FAQ_AUDIENCES: Record<string, string> = {
+  all: "Todos",
+  academy: "Academia",
+  student: "Aluno",
+};
+
+const FAQ_LOCALES: Record<string, string> = {
+  "pt-BR": "Português",
+  en: "Inglês",
+};
+
+const emptyFaq: FaqDraft = {
+  question: "",
+  answer: "",
+  category: "other",
+  audience: "all",
+  locale: "pt-BR",
+  sort_order: 0,
+  is_published: false,
+};
+
+function faqDraft(item: ManagedFaq): FaqDraft {
+  return {
+    question: item.question,
+    answer: item.answer,
+    category: item.category,
+    audience: item.audience,
+    locale: item.locale,
+    sort_order: item.sort_order,
+    is_published: item.is_published,
+  };
+}
+
 export function FaqConsole() {
   const loader = useCallback(() => platformApi.faq(), []);
   const query = useLoad<ManagedFaq[]>(loader);
-  const empty = {
-    question: "",
-    answer: "",
-    category: "other",
-    audience: "all",
-    locale: "pt-BR",
-    sort_order: 0,
-    is_published: false,
-  };
-  const [draft, setDraft] = useState(empty);
+  const [editor, setEditor] = useState<{ id: string | null; draft: FaqDraft } | null>(null);
+  const [notice, setNotice] = useState("");
+  const [saveError, setSaveError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  function openEditor(item?: ManagedFaq) {
+    setNotice("");
+    setSaveError("");
+    setEditor({ id: item?.id ?? null, draft: item ? faqDraft(item) : { ...emptyFaq } });
+  }
+
+  function updateDraft(patch: Partial<FaqDraft>) {
+    setEditor((current) => (current ? { ...current, draft: { ...current.draft, ...patch } } : current));
+  }
 
   async function save(event: FormEvent) {
     event.preventDefault();
+    if (!editor) return;
+    setSaving(true);
+    setSaveError("");
     try {
-      await platformApi.saveFaq(null, draft);
-      setDraft(empty);
+      await platformApi.saveFaq(editor.id, editor.draft);
+      setEditor(null);
+      setNotice("Pergunta salva com sucesso.");
       await query.reload();
     } catch (caught) {
-      query.setError(caught instanceof Error ? caught.message : "FAQ não salva.");
-    }
-  }
-
-  async function toggle(item: ManagedFaq) {
-    try {
-      await platformApi.saveFaq(item.id, {
-        question: item.question,
-        answer: item.answer,
-        category: item.category,
-        audience: item.audience,
-        locale: item.locale,
-        sort_order: item.sort_order,
-        is_published: !item.is_published,
-      });
-      await query.reload();
-    } catch (caught) {
-      query.setError(caught instanceof Error ? caught.message : "FAQ não atualizada.");
+      setSaveError(caught instanceof Error ? caught.message : "Pergunta não salva.");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -1515,83 +1566,153 @@ export function FaqConsole() {
       <Page
         eyebrow="CONTEÚDO DE AJUDA"
         title="Perguntas frequentes"
-        description="Publique respostas por público e idioma."
+        description="Organize a ajuda exibida no produto. Somente perguntas publicadas aparecem para os usuários."
       >
-        <form className="page-card faq-form" onSubmit={save}>
-          <label>
-            Pergunta
-            <input
-              value={draft.question}
-              onChange={(event) =>
-                setDraft({
-                  ...draft,
-                  question: event.target.value,
-                })
-              }
-              required
-            />
-          </label>
-          <label>
-            Resposta
-            <textarea
-              rows={5}
-              value={draft.answer}
-              onChange={(event) => setDraft({ ...draft, answer: event.target.value })}
-              required
-            />
-          </label>
-          <label>
-            Categoria
-            <select
-              value={draft.category}
-              onChange={(event) =>
-                setDraft({
-                  ...draft,
-                  category: event.target.value,
-                })
-              }
-            >
-              <option value="plans">Planos</option>
-              <option value="billing">Cobrança</option>
-              <option value="account">Conta</option>
-              <option value="technical">Técnico</option>
-              <option value="other">Outro</option>
-            </select>
-          </label>
-          <label className="check-label">
-            <input
-              type="checkbox"
-              checked={draft.is_published}
-              onChange={(event) =>
-                setDraft({
-                  ...draft,
-                  is_published: event.target.checked,
-                })
-              }
-            />
-            Publicar agora
-          </label>
-          <button className="button button-primary">Adicionar FAQ</button>
-        </form>
+        {notice && (
+          <p className="legal-notice" role="status">
+            {notice}
+          </p>
+        )}
         {!query.data ? (
           <State error={query.error} />
         ) : (
-          <div className="faq-list">
-            {query.data.map((item) => (
-              <article className="page-card" key={item.id}>
-                <header>
-                  <h2>{item.question}</h2>
-                  <span className={`status-pill ${item.is_published ? "active" : "inactive"}`}>
-                    {item.is_published ? "Publicada" : "Rascunho"}
-                  </span>
-                </header>
-                <p>{item.answer}</p>
-                <button className="button" type="button" onClick={() => void toggle(item)}>
-                  {item.is_published ? "Mover para rascunho" : "Publicar"}
-                </button>
-              </article>
-            ))}
-          </div>
+          <section className="page-card wide-card">
+            <div className="panel-heading">
+              <div>
+                <h2>Perguntas cadastradas</h2>
+                <p>A listagem mostra público, idioma e ordem de exibição.</p>
+              </div>
+              <button className="button button-primary" type="button" disabled={saving} onClick={() => openEditor()}>
+                Nova pergunta
+              </button>
+            </div>
+            {editor && (
+              <form className="faq-editor" onSubmit={(event) => void save(event)}>
+                <h3>{editor.id ? "Editar pergunta" : "Nova pergunta"}</h3>
+                <label>
+                  Pergunta
+                  <input
+                    required
+                    maxLength={240}
+                    value={editor.draft.question}
+                    disabled={saving}
+                    onChange={(event) => updateDraft({ question: event.target.value })}
+                  />
+                </label>
+                <label>
+                  Resposta
+                  <textarea
+                    required
+                    rows={7}
+                    maxLength={10000}
+                    value={editor.draft.answer}
+                    disabled={saving}
+                    onChange={(event) => updateDraft({ answer: event.target.value })}
+                  />
+                </label>
+                <div className="form-grid">
+                  <label>
+                    Público
+                    <select
+                      value={editor.draft.audience}
+                      disabled={saving}
+                      onChange={(event) => updateDraft({ audience: event.target.value })}
+                    >
+                      {Object.entries(FAQ_AUDIENCES).map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Categoria
+                    <select
+                      value={editor.draft.category}
+                      disabled={saving}
+                      onChange={(event) => updateDraft({ category: event.target.value })}
+                    >
+                      {Object.entries(FAQ_CATEGORIES).map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Idioma
+                    <select
+                      value={editor.draft.locale}
+                      disabled={saving}
+                      onChange={(event) => updateDraft({ locale: event.target.value })}
+                    >
+                      {Object.entries(FAQ_LOCALES).map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Ordem
+                    <input
+                      type="number"
+                      min={0}
+                      required
+                      value={editor.draft.sort_order}
+                      disabled={saving}
+                      onChange={(event) => updateDraft({ sort_order: Number(event.target.value) })}
+                    />
+                  </label>
+                </div>
+                <label className="check-label">
+                  <input
+                    type="checkbox"
+                    checked={editor.draft.is_published}
+                    disabled={saving}
+                    onChange={(event) => updateDraft({ is_published: event.target.checked })}
+                  />
+                  Publicar pergunta
+                </label>
+                {saveError && (
+                  <p className="legal-error" role="alert">
+                    {saveError}
+                  </p>
+                )}
+                <div className="faq-editor-actions">
+                  <button className="button" type="button" disabled={saving} onClick={() => setEditor(null)}>
+                    Cancelar
+                  </button>
+                  <button
+                    className="button button-primary"
+                    disabled={saving || !editor.draft.question.trim() || !editor.draft.answer.trim()}
+                  >
+                    {saving ? "Salvando…" : "Salvar pergunta"}
+                  </button>
+                </div>
+              </form>
+            )}
+            {!query.data.length ? (
+              <p className="faq-empty">Nenhuma pergunta cadastrada.</p>
+            ) : (
+              <div className="faq-list">
+                {query.data.map((item) => (
+                  <article className="faq-admin-entry" key={item.id}>
+                    <div>
+                      <strong>{item.question}</strong>
+                      <p>
+                        {FAQ_AUDIENCES[item.audience] ?? item.audience} · {FAQ_LOCALES[item.locale] ?? item.locale} ·{" "}
+                        {item.is_published ? "Publicada" : "Rascunho"} · Ordem {item.sort_order}
+                      </p>
+                    </div>
+                    <button className="button" type="button" disabled={saving} onClick={() => openEditor(item)}>
+                      Editar
+                    </button>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
         )}
       </Page>
     </Guard>

@@ -25,7 +25,7 @@ O conteúdo demo é fictício. Ele não autentica usuários, persiste registros 
 
 O painel cobre autenticação, academias, alunos, equipe, exercícios, equipamentos, treinos, avaliações, nutrição, configurações, orientação de auditoria e assinatura. O acesso à API usa login JWT, refresh rotativo, revogação e `X-Tenant-ID`.
 
-Tokens de acesso e refresh ficam em memória. Recarregar exige novo login. Cada requisição autenticada pertence a uma geração de sessão para impedir que respostas antigas alterem uma nova conta ou academia. Refreshes concorrentes compartilham uma tentativa dentro da mesma geração, e uma sessão atual inválida devolve a interface para o acesso.
+Tokens de acesso e refresh ficam no `localStorage` deste navegador e são restaurados ao recarregar. Sair apaga essa sessão. Cada requisição autenticada pertence a uma geração de sessão para impedir que respostas antigas alterem uma nova conta ou academia. Refreshes concorrentes compartilham uma tentativa dentro da mesma geração, e uma sessão atual inválida devolve a interface para o acesso.
 
 As verificações de permissão da interface melhoram a experiência, mas nunca substituem a autorização do backend. O servidor deve validar academia, papel, vínculo do aluno, credenciais profissionais, atribuição e consentimento em cada leitura e mutação.
 

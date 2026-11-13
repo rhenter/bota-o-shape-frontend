@@ -1,6 +1,6 @@
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { en } from "./en";
-import { negotiateLocale, type Locale } from "./locale";
+import { LOCALE_COOKIE, localeFromCookie, negotiateLocale, type Locale } from "./locale";
 import { ptBR, type Messages } from "./pt-BR";
 
 export type { Messages };
@@ -10,6 +10,12 @@ export function messagesFor(locale: Locale): Messages {
 }
 
 export async function getLocale(): Promise<Locale> {
+  try {
+    const chosen = localeFromCookie((await cookies()).get(LOCALE_COOKIE)?.value);
+    if (chosen) return chosen;
+  } catch {
+    // Cookie store is only available during a request.
+  }
   try {
     const list = await headers();
     return negotiateLocale(list.get("accept-language"));

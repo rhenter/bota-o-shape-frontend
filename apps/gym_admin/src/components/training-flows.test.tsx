@@ -276,6 +276,8 @@ describe("fluxos reais de treinos e avaliações", () => {
       screen.getByLabelText("Protocolo de avaliação *"),
       "p1",
     );
+    expect(screen.getByText(/não usa aparelho/i)).toBeVisible();
+    expect(screen.queryByLabelText(/Marca do aparelho/)).toBeNull();
     await user.selectOptions(
       screen.getByLabelText("Consentimento registrado *"),
       "c1",
@@ -301,6 +303,7 @@ describe("fluxos reais de treinos e avaliações", () => {
       student: "s1",
       consent: "c1",
       status: "draft",
+      device: {},
       measurements: [
         {
           raw_value: "10001",

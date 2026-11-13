@@ -2,12 +2,10 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { AcademyLanding, AcademyUnavailable } from "@/components/academy-landing";
 import { getMessages } from "@/i18n/server";
-import { fetchAcademy } from "@/lib/api";
+import { fetchAcademy, fetchPublicContact, platformLinks } from "@/lib/api";
+import { RESERVED_SLUGS } from "@/lib/reserved-slugs";
 
 type Props = { params: Promise<{ academySlug: string }> };
-
-/** Paths owned by the gym admin, the API, or the healthcheck. They are not academy slugs. */
-const RESERVED_SLUGS = new Set(["admin", "api", "health"]);
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { academySlug } = await params;
@@ -17,18 +15,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { academy } = result;
   return {
     title: academy.name,
-    description: academy.profile.tagline,
+    description: academy.landing?.title || academy.profile.tagline,
     alternates: { canonical: `/${academy.slug}` },
-    openGraph: { title: academy.name, description: academy.profile.tagline, url: `/${academy.slug}` },
+    openGraph: { title: academy.name, description: academy.landing?.title || academy.profile.tagline, url: `/${academy.slug}` },
   };
 }
 
 export default async function AcademyPage({ params }: Props) {
   const { academySlug } = await params;
   if (RESERVED_SLUGS.has(academySlug)) notFound();
-  const result = await fetchAcademy({ slug: academySlug });
+  const [result, messages, contact] = await Promise.all([
+    fetchAcademy({ slug: academySlug }),
+    getMessages(),
+    fetchPublicContact(),
+  ]);
   if (result.status === "not_found") notFound();
-  const messages = await getMessages();
   if (result.status === "error") return <AcademyUnavailable failed messages={messages} />;
-  return <AcademyLanding academy={result.academy} messages={messages} />;
+  return <AcademyLanding academy={result.academy} messages={messages} platform={platformLinks(contact)} />;
 }

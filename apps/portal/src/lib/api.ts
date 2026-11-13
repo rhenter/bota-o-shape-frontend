@@ -103,21 +103,26 @@ export async function fetchFaq(locale: string, fetcher: typeof fetch = fetch): P
 export const PRO_PLAN_CODE = "pro";
 export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3001").replace(/\/$/, "");
 
-export type Modality = { title: string; text: string };
+export type PublicLanding = {
+  mode: "standard" | "custom";
+  title: string;
+  logo: string | null;
+  phone: string;
+  email: string;
+  whatsapp: string;
+  instagram_url: string;
+  facebook_url: string;
+  youtube_url: string;
+  theme: "lime" | "graphite" | "ocean" | "black" | "white";
+  background: "none" | "gym_floor" | "studio" | "outdoor" | "weights" | "machines" | "group_class" | "nutrition";
+};
 export type Academy = {
   name: string;
+  legal_name?: string;
   slug: string;
-  profile: { tagline?: string; logo_url?: string; modalities?: unknown; whatsapp?: string; address?: string };
+  profile: { tagline?: string; logo_url?: string; services?: string[]; whatsapp?: string; address?: string; phone?: string };
+  landing?: PublicLanding | null;
 };
-
-/** Public profile is free-form JSON; keep only well-formed modalities. */
-export function modalitiesOf(profile: Academy["profile"]): Modality[] {
-  if (!Array.isArray(profile.modalities)) return [];
-  return profile.modalities.flatMap((item): Modality[] => {
-    const { title, text } = (item ?? {}) as Record<string, unknown>;
-    return typeof title === "string" && title.trim() ? [{ title: title.trim(), text: typeof text === "string" ? text : "" }] : [];
-  });
-}
 
 /** WhatsApp link from digits only; null when absent or implausible. */
 export function whatsappUrl(value: string | undefined): string | null {
@@ -155,6 +160,19 @@ export type OwnerRegistration = {
   email: string;
   password: string;
   plan_code?: string;
+  unit_name?: string;
+  legal_name?: string;
+  phone?: string;
+  services?: string[];
+  address: {
+    postal_code: string;
+    street: string;
+    number: string;
+    complement?: string;
+    district: string;
+    city: string;
+    state: string;
+  };
 };
 
 export type RegistrationErrors = { fields: Record<string, string[]>; general: string[] };
@@ -163,7 +181,29 @@ export type PublicContact = {
   whatsapp: string;
   email: string;
   social_urls: Record<string, string>;
+  privacy_url?: string | null;
+  terms_url?: string | null;
+  portal_url?: string | null;
 };
+
+export type PlatformLinks = {
+  privacyUrl: string | null;
+  termsUrl: string | null;
+  portalUrl: string | null;
+};
+
+/** https URLs from platform settings only. Anything else is treated as missing. */
+export function httpsUrl(value: unknown): string | null {
+  return typeof value === "string" && /^https:\/\/\S+$/.test(value) ? value : null;
+}
+
+export function platformLinks(contact: PublicContact | null): PlatformLinks {
+  return {
+    privacyUrl: httpsUrl(contact?.privacy_url),
+    termsUrl: httpsUrl(contact?.terms_url),
+    portalUrl: httpsUrl(contact?.portal_url),
+  };
+}
 
 export type ContactRequest = {
   name: string;
@@ -173,6 +213,7 @@ export type ContactRequest = {
   message: string;
   consent: boolean;
   page_url?: string;
+  academy_slug?: string;
 };
 
 export async function fetchPublicContact(fetcher: typeof fetch = fetch): Promise<PublicContact | null> {
@@ -213,6 +254,30 @@ export async function submitContact(
   return { fields: {}, general: [copy.contactFailed] };
 }
 
+export type PostalCodeAddress = {
+  postal_code: string;
+  street: string;
+  district: string;
+  city: string;
+  state: string;
+};
+
+/** Looks up a Brazilian postal code. The portal proxies this to the API. */
+export async function lookupPostalCode(
+  postalCode: string,
+  fetcher: typeof fetch = fetch,
+): Promise<{ address: PostalCodeAddress } | { error: "invalid" | "missing" | "unavailable" }> {
+  try {
+    const response = await fetcher(`/api/tenancy/postal-code/${postalCode}/`);
+    if (response.ok) return { address: (await response.json()) as PostalCodeAddress };
+    if (response.status === 404) return { error: "missing" };
+    if (response.status === 400) return { error: "invalid" };
+  } catch {
+    return { error: "unavailable" };
+  }
+  return { error: "unavailable" };
+}
+
 /** Returns null on success or the errors, split by field. */
 export async function registerOwner(
   data: OwnerRegistration,
@@ -235,6 +300,17 @@ export async function registerOwner(
     const fields: Record<string, string[]> = {};
     const general: string[] = [];
     for (const [key, value] of Object.entries(body)) {
+      if (value && typeof value === "object" && !Array.isArray(value)) {
+        for (const [child, childValue] of Object.entries(value)) {
+          const nested = Array.isArray(childValue)
+            ? childValue.map(String)
+            : typeof childValue === "string"
+              ? [childValue]
+              : [];
+          if (nested.length) fields[`${key}.${child}`] = nested;
+        }
+        continue;
+      }
       const messages = Array.isArray(value) ? value.map(String) : typeof value === "string" ? [value] : [];
       if (!messages.length) continue;
       if (key === "non_field_errors" || key === "detail") general.push(...messages);

@@ -13,7 +13,7 @@ No web, o modo padrão é API; `API_BASE_URL` define o destino do proxy no servi
 | Camada | Responsabilidade |
 | --- | --- |
 | `gym_admin/src/lib/api-client.ts`, `admin-contracts.ts`, `training-contracts.ts` | Transporte, JWT/refresh/revogação, `X-Tenant-ID`, paginação da mesma origem e DTOs do backend. |
-| `gym_admin/src/components/app-context.tsx` | Sessão em memória, academia ativa, memberships, projeção dos catálogos e invalidação ao sair/expirar/trocar tenant. |
+| `gym_admin/src/components/app-context.tsx` | Sessão restaurada do navegador, academia ativa, memberships, projeção dos catálogos e invalidação ao sair/expirar/trocar tenant. |
 | `use-training-data.ts`, `use-admin-data.ts` | Leituras por escopo, loading/erro/retry, controles operacionais e nutrição. Respostas antigas não entram no tenant novo. |
 | `domain.ts`, `permissions.ts`, `assessments.ts`, `nutrition.ts` | Modelos de apresentação e regras explícitas de interface, comparação e cálculo descritivo. |
 | `demo-data.ts`, `demo-repository.ts` | Fixtures e leituras isoladas por usuário/academia; sem autenticação, envio ou persistência real. |

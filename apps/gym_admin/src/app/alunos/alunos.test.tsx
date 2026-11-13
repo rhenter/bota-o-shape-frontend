@@ -23,10 +23,7 @@ describe("alunos", () => {
       screen.queryByRole("link", { name: "João Pedro Silva" }),
     ).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Limpar filtros" }));
-    await user.selectOptions(
-      screen.getByRole("combobox", { name: "Status do aluno" }),
-      "archived",
-    );
+    await user.click(screen.getByRole("tab", { name: /Arquivados/ }));
     expect(screen.getByRole("link", { name: "Bruno Almeida" })).toBeVisible();
     expect(
       screen.queryByRole("link", { name: "Ana Clara Souza" }),

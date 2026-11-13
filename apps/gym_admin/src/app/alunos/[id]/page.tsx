@@ -6,6 +6,11 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { EmptyState, ErrorState, LoadingState } from "@/components/states";
 import { useTrainingData } from "@/components/use-training-data";
+import {
+  AssignDietitianDialog,
+  dietitianNames,
+  useDietitianDirectory,
+} from "@/components/students/assign-dietitian";
 
 export default function StudentProfilePage({
   params,
@@ -38,6 +43,8 @@ function StudentProfile({ id }: { id: string }) {
   const [section, setSection] = useState("overview");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [assignOpen, setAssignOpen] = useState(false);
+  const dietitianDirectory = useDietitianDirectory();
   if (!student)
     return (
       <>
@@ -117,6 +124,28 @@ function StudentProfile({ id }: { id: string }) {
             </dl>
           </section>
           <section className="card">
+            <h2>Nutricionista</h2>
+            <p>
+              {dietitianNames(
+                student.id,
+                dietitianDirectory.assignments,
+                dietitianDirectory.dietitians,
+              )}
+            </p>
+            {dietitianDirectory.admin && (
+              <button
+                className="button"
+                type="button"
+                onClick={() => setAssignOpen(true)}
+              >
+                Atribuir nutricionista
+              </button>
+            )}
+            <p className="help-text">
+              O plano alimentar continua dependendo do consentimento do aluno.
+            </p>
+          </section>
+          <section className="card">
             <h2>Profissional responsável</h2>
             {student.coachIds.length ? (
               student.coachIds.map((coachId) => (
@@ -179,6 +208,19 @@ function StudentProfile({ id }: { id: string }) {
             </p>
           </section>
         </div>
+      )}
+      {assignOpen && (
+        <AssignDietitianDialog
+          studentId={student.id}
+          studentName={student.name}
+          dietitians={dietitianDirectory.dietitians}
+          assignments={dietitianDirectory.assignments}
+          onClose={() => setAssignOpen(false)}
+          onSaved={(text) => {
+            setMessage(text);
+            dietitianDirectory.reload();
+          }}
+        />
       )}
       {section === "workouts" && (
         <section className="card">

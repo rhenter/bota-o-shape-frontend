@@ -169,6 +169,22 @@ describe("snapshot da API por academia", () => {
     },
   );
 
+  it("reabre a academia salva sem pedir login outra vez", async () => {
+    localStorage.setItem(
+      "bota-o-shape:gym-session",
+      JSON.stringify({ access: token, refresh: "r1" }),
+    );
+    localStorage.setItem("bota-o-shape:gym-tenant", "t2");
+    vi.stubGlobal("fetch", mockApi());
+    render(
+      <DemoProvider mode="api">
+        <Harness />
+      </DemoProvider>,
+    );
+    expect(await screen.findByText("Aluno B")).toBeVisible();
+    expect(screen.queryByText("Aluno A")).not.toBeInTheDocument();
+  });
+
   it("mapeia owner sem confiar nas claims para conceder papel e troca o snapshot", async () => {
     vi.stubGlobal("fetch", mockApi());
     const user = userEvent.setup();

@@ -17,6 +17,7 @@ const nextConfig: NextConfig = {
         ...adminRewrites(process.env.GYM_ADMIN_ORIGIN),
         { source: "/api/:path*/", destination: `${apiBaseUrl}/api/:path*/` },
         { source: "/api/:path*", destination: `${apiBaseUrl}/api/:path*` },
+        { source: "/media/:path*", destination: `${apiBaseUrl}/media/:path*` },
       ],
     };
   },

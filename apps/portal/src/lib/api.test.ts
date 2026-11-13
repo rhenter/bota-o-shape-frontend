@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { fetchAcademy, fetchFaq, fetchPlans, fetchPublicContact, registerOwner, submitContact } from "./api";
+import { fetchAcademy, fetchFaq, fetchPlans, fetchPublicContact, lookupPostalCode, platformLinks, registerOwner, submitContact } from "./api";
+import { landingLogoUrl } from "./landing-logo";
 
 const owner = {
   tenant_name: "A",
@@ -10,6 +11,14 @@ const owner = {
   last_name: "",
   email: "a@b.co",
   password: "x",
+  address: {
+    postal_code: "01310100",
+    street: "Rua A",
+    number: "1",
+    district: "Centro",
+    city: "São Paulo",
+    state: "SP",
+  },
 };
 
 describe("fetchPlans", () => {
@@ -63,6 +72,31 @@ describe("fetchFaq", () => {
   });
 });
 
+describe("lookupPostalCode", () => {
+  it("returns the address from the API", async () => {
+    const address = { postal_code: "01310100", street: "Avenida Paulista", district: "Bela Vista", city: "São Paulo", state: "SP" };
+    const fetcher = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => address });
+    expect(await lookupPostalCode("01310100", fetcher as never)).toEqual({ address });
+    expect(fetcher.mock.calls[0][0]).toBe("/api/tenancy/postal-code/01310100/");
+  });
+
+  it("distinguishes a missing code from an outage", async () => {
+    expect(await lookupPostalCode("00000000", vi.fn().mockResolvedValue({ ok: false, status: 404 }) as never)).toEqual({ error: "missing" });
+    expect(await lookupPostalCode("01310100", vi.fn().mockRejectedValue(new Error("down")) as never)).toEqual({ error: "unavailable" });
+  });
+});
+
+describe("landingLogoUrl", () => {
+  it("keeps an uploaded media path and drops anything else unsafe", () => {
+    expect(landingLogoUrl("/media/landing-logos/logo.png")).toBe("/media/landing-logos/logo.png");
+    expect(landingLogoUrl("http://127.0.0.1:8006/media/landing-logos/logo.png")).toBe("/media/landing-logos/logo.png");
+    expect(landingLogoUrl("https://cdn.example/logo.png")).toBe("https://cdn.example/logo.png");
+    expect(landingLogoUrl("javascript:alert(1)")).toBeNull();
+    expect(landingLogoUrl("http://evil.example/logo.png")).toBeNull();
+    expect(landingLogoUrl("/media/../secret")).toBeNull();
+  });
+});
+
 describe("registerOwner", () => {
   it("returns null on success", async () => {
     expect(await registerOwner(owner, vi.fn().mockResolvedValue({ ok: true }) as never)).toBeNull();
@@ -86,6 +120,21 @@ describe("public contact", () => {
     expect(JSON.parse(fetcher.mock.calls[0][1].body)).toMatchObject({ consent: true, message: "Olá" });
   });
 
+  it("keeps only https platform document URLs", () => {
+    expect(platformLinks({
+      whatsapp: "",
+      email: "contato@example.com",
+      social_urls: {},
+      privacy_url: "https://www.botaoshape.com.br/privacidade",
+      terms_url: "javascript:alert(1)",
+      portal_url: "",
+    })).toEqual({
+      privacyUrl: "https://www.botaoshape.com.br/privacidade",
+      termsUrl: null,
+      portalUrl: null,
+    });
+    expect(platformLinks(null)).toEqual({ privacyUrl: null, termsUrl: null, portalUrl: null });
+  });
   it("does not invent settings and surfaces contact errors", async () => {
     expect(await fetchPublicContact(vi.fn().mockRejectedValue(new Error("down")) as never)).toBeNull();
     const error = await submitContact(
